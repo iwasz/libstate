@@ -93,3 +93,4 @@ TEST_CASE ("NoReturnDone", "[DoneNotDoneAction]")
         state.entry (""s);
         REQUIRE (counter == 1);
 }
+

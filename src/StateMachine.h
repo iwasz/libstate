@@ -51,11 +51,21 @@ public:
 
                 Done done = Done::YES;
 
-                if constexpr (std::is_same<typename std::result_of<T (Arg...)>::type, Done>::value) {
-                        done = action (std::forward<Arg...> (a)...);
+                if constexpr (std::is_invocable<T, Arg...>::value) {
+                        if constexpr (std::is_same<typename std::result_of<T (Arg...)>::type, Done>::value) {
+                                done = action (std::forward<Arg...> (a)...);
+                        }
+                        else {
+                                action (std::forward<Arg...> (a)...);
+                        }
                 }
                 else {
-                        action (std::forward<Arg...> (a)...);
+                        if constexpr (std::is_same<typename std::result_of<T ()>::type, Done>::value) {
+                                done = action ();
+                        }
+                        else {
+                                action ();
+                        }
                 }
 
                 if (done == Done::YES) {

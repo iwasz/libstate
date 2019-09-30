@@ -27,5 +27,6 @@ ADD_EXECUTABLE (unittest
     "test/00CatchInit.cc"
     "test/01InstantiationTest.cc"
     "test/02DoneNotDoneActionTest.cc"
+    "test/03EventArgNoEventArgActionTest.cc"
 )
 
