@@ -35,6 +35,8 @@ enum class Done { NO, YES };
  */
 template <typename T> class ActionRunner {
 public:
+        static constexpr auto returnsDone = hana::is_valid ([](auto &&obj) -> decltype ((void)hana::traits::declval (obj).operator()) {});
+
         explicit ActionRunner (T t) : action (std::move (t)) {}
 
         /**
@@ -47,7 +49,14 @@ public:
                         return;
                 }
 
-                Done done = action (std::forward<Arg...> (a)...);
+                Done done = Done::YES;
+
+                if constexpr (std::is_same<typename std::result_of<T (Arg...)>::type, Done>::value) {
+                        done = action (std::forward<Arg...> (a)...);
+                }
+                else {
+                        action (std::forward<Arg...> (a)...);
+                }
 
                 if (done == Done::YES) {
                         active = false;

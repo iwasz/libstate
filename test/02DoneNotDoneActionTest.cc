@@ -73,3 +73,23 @@ TEST_CASE ("NotDone", "[DoneNotDoneAction]")
         state.entry (""s);
         REQUIRE (counter == 4);
 }
+
+/**
+ * Another way of implementing an action is to use function whih does not
+ * return anything. Such a function will be assumed to be done (i.e. it returnd
+ * Done::YES implicitly).
+ */
+TEST_CASE ("NoReturnDone", "[DoneNotDoneAction]")
+{
+        int counter = 0;
+
+        State state (entry ([&counter](auto) {
+                ++counter;
+        }));
+
+        state.entry (""s);
+        REQUIRE (counter == 1);
+
+        state.entry (""s);
+        REQUIRE (counter == 1);
+}
