@@ -1,3 +1,11 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
 #pragma once
 #include <boost/hana.hpp>
 #include <gsl/gsl>
@@ -10,6 +18,8 @@
 namespace hana = boost::hana;
 using namespace hana::literals;
 using namespace std::string_literals;
+
+namespace ls {
 
 /// Do zwracania z akcji.
 enum class Done { NO, YES };
@@ -27,11 +37,16 @@ template <typename T> class ActionRunner {
 public:
         explicit ActionRunner (T t) : action (std::move (t)) {}
 
-        template <typename Ret, typename... Arg> Ret call (Arg &&... a)
+        /**
+         * It does not have to use paramater pack. I think actions API will always have
+         * only one parameter, but let leave it for now.
+         */
+        template <typename... Arg> void operator() (Arg &&... a)
         {
                 if (!active) {
-                        return {};
+                        return;
                 }
+
                 Done done = action (std::forward<Arg...> (a)...);
 
                 if (done == Done::YES) {
@@ -53,13 +68,12 @@ private:
  */
 template <typename T> class ActionTuple {
 public:
-        template <typename Ev> void invoke (Ev const &event)
+        explicit ActionTuple (T a) : actions{std::move (a)} {}
+
+        template <typename Ev> void operator() (Ev const &event)
         {
                 hana::for_each (actions, [&event](auto &f) { f (event); });
         }
-
-        // protected:
-        explicit ActionTuple (T &&a) : actions{std::move (a)} {}
 
 private:
         T actions;
@@ -84,16 +98,16 @@ template <typename T> struct Action : public ActionTuple<T> {
         using ActionTuple<T>::ActionTuple;
 };
 
-template <typename... Ar> auto actionTuple (Ar &&... args)
-{
-        auto tuple = hana::make_tuple (std::forward<Ar> (args)...);
-        auto at = ActionTuple (std::move (tuple));
-        return at;
-}
+// template <typename... Ar> auto actionTuple (Ar &&... args)
+//{
+//        auto tuple = hana::make_tuple (std::forward<Ar> (args)...);
+//        auto at = ActionTuple (std::move (tuple));
+//        return at;
+//}
 
 template <template <typename T> class Tu, typename... Ar> auto actionTuple2 (Ar &&... args)
 {
-        auto tuple = hana::make_tuple (std::forward<Ar> (args)...);
+        auto tuple = hana::make_tuple (ActionRunner (std::forward<Ar> (args))...);
         auto at = Tu<decltype (tuple)> (std::move (tuple));
         return at;
 }
@@ -102,15 +116,15 @@ template <typename... Ar> auto entry (Ar &&... args) { return actionTuple2<Entry
 template <typename... Ar> auto exit (Ar &&... args) { return actionTuple2<Exit, Ar...> (std::forward<Ar> (args)...); }
 template <typename... Ar> auto action (Ar &&... args) { return actionTuple2<Action, Ar...> (std::forward<Ar> (args)...); }
 
-template </*typename Tu,*/ typename... Ar> struct Actions {
+// template </*typename Tu,*/ typename... Ar> struct Actions {
 
-        auto operator() (Ar &&... args)
-        {
-                auto tuple = hana::make_tuple (std::forward<Ar> (args)...);
-                auto at = /*Tu*/ ActionTuple (std::move (tuple));
-                return at;
-        }
-};
+//        auto operator() (Ar &&... args)
+//        {
+//                auto tuple = hana::make_tuple (std::forward<Ar> (args)...);
+//                auto at = /*Tu*/ ActionTuple (std::move (tuple));
+//                return at;
+//        }
+//};
 
 // template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry, Ar> (std::forward<Ar> (args)...); }
 
@@ -128,7 +142,7 @@ template <typename T1 = void, typename T2 = void> struct State {
         explicit State (Entry<T1> en) : entry (std::move (en)) {}
         State (Entry<T1> en, Exit<T2> ex) : entry (std::move (en)), exit (std::move (ex)) {}
 
-private:
+        // private:
         Entry<T1> entry;
         Exit<T2> exit;
 };
@@ -144,3 +158,5 @@ public:
 private:
         gsl::czstring<> cmd;
 };
+
+} // namespace ls

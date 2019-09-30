@@ -1,9 +1,22 @@
+/****************************************************************************
+ *                                                                          *
+ *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
+ *  ~~~~~~~~                                                                *
+ *  License : see COPYING file for details.                                 *
+ *  ~~~~~~~~~                                                               *
+ ****************************************************************************/
+
 #include "StateMachine.h"
 #include "catch.hpp"
 #include <cstring>
 //#include <etl/cstring.h>
 #include <iostream>
 #include <unistd.h>
+
+namespace hana = boost::hana;
+using namespace hana::literals;
+using namespace std::string_literals;
+using namespace ls;
 
 // Nigdzie nie używam czegoś takiego, ale miło by było móc.
 template <typename T> Done actionFunctionTemplate (T &&event)
@@ -30,8 +43,9 @@ struct Class {
 private:
         std::string value;
 };
+
 /**
- * @brief TEST_CASE
+ * This test only instantiates some bits of state machine and checks if it is even possible.
  */
 TEST_CASE ("First test", "[Instantiation]")
 {
@@ -58,4 +72,7 @@ TEST_CASE ("First test", "[Instantiation]")
                               Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
 
         auto state3 = State{entry (At{"ATZ"}, At{"ATDT"})};
+
+        state2.entry ("hello"s);
+        state2.exit ("hello"s);
 }
