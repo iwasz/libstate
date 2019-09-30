@@ -29,7 +29,7 @@ enum class Done { NO, YES };
 //                   State {}};
 
 /**
- * It's a wrapper for an action which can run it conditionally. It works like that : if 'active' flag is true, the 'call'
+ * It's a wrapper for an action which can run it conditionally. It works like that : if 'active' flag is true, the operator()
  * method will run the 'action'. Then, if the return value from that 'action' equals Done::YES, 'active' is flipped to
  * false, and next time the action will not be run.
  */
@@ -53,10 +53,10 @@ public:
 
                 if constexpr (std::is_invocable<T, Arg...>::value) {
                         if constexpr (std::is_same<typename std::result_of<T (Arg...)>::type, Done>::value) {
-                                done = action (std::forward<Arg...> (a)...);
+                                done = action (std::forward<Arg> (a)...);
                         }
                         else {
-                                action (std::forward<Arg...> (a)...);
+                                action (std::forward<Arg> (a)...);
                         }
                 }
                 else {
@@ -101,7 +101,7 @@ private:
 template <> class ActionTuple<void> {
 public:
         ActionTuple () = default;
-        template <typename Ev> void invoke (Ev const &event) {}
+        template <typename Ev> void operator() (Ev const &/*event*/) {}
 };
 
 template <typename T> struct Entry : public ActionTuple<T> {
@@ -177,5 +177,16 @@ public:
 private:
         gsl::czstring<> cmd;
 };
+
+template <typename S> class Machine {
+public:
+        explicit Machine (S s) : states{std::move (s)} {}
+
+private:
+        /// hana::tuple of States.
+        S states;
+};
+
+template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
 
 } // namespace ls

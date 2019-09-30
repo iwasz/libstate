@@ -76,3 +76,12 @@ TEST_CASE ("First test", "[Instantiation]")
         state2.entry ("hello"s);
         state2.exit ("hello"s);
 }
+
+/**
+ * Machine instantiated for the forst time.
+ */
+TEST_CASE ("Machine instance", "[Instantiation]")
+{
+        auto m = machine (State (entry ([] { std::cout << "1st entry" << std::endl; }), exit ([] { std::cout << "1st exit" << std::endl; })),
+                          State (entry ([] { std::cout << "2nd entry" << std::endl; }), exit ([] { std::cout << "2nd exit" << std::endl; })));
+}
