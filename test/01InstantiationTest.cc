@@ -82,6 +82,17 @@ TEST_CASE ("First test", "[Instantiation]")
  */
 TEST_CASE ("Machine instance", "[Instantiation]")
 {
-        auto m = machine (State (entry ([] { std::cout << "1st entry" << std::endl; }), exit ([] { std::cout << "1st exit" << std::endl; })),
-                          State (entry ([] { std::cout << "2nd entry" << std::endl; }), exit ([] { std::cout << "2nd exit" << std::endl; })));
+        int a, b;
+        auto m = machine (State (entry ([] {
+                                         std::cout << "1st entry" << std::endl;
+                                         return Done::YES;
+                                 }),
+                                 exit ([] {
+                                         std::cout << "1st exit" << std::endl;
+                                         return Done::YES;
+                                 }),
+                                 transitions (Transition (StateName::A, Condition ()))),
+
+                          State (entry (At ("Z")), exit (At ("DT"))),
+                          transitions (Transition (StateName::B, Eq ("OK"), action (At ("A"), At ("B")))));
 }

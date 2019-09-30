@@ -21,6 +21,9 @@ using namespace std::string_literals;
 
 namespace ls {
 
+// TODO replace
+enum class StateName { A, B, C };
+
 /// Do zwracania z akcji.
 enum class Done { NO, YES };
 
@@ -101,7 +104,7 @@ private:
 template <> class ActionTuple<void> {
 public:
         ActionTuple () = default;
-        template <typename Ev> void operator() (Ev const &/*event*/) {}
+        template <typename Ev> void operator() (Ev const & /*event*/) {}
 };
 
 template <typename T> struct Entry : public ActionTuple<T> {
@@ -115,6 +118,10 @@ template <typename T> struct Exit : public ActionTuple<T> {
 /// Transition action.
 template <typename T> struct Action : public ActionTuple<T> {
         using ActionTuple<T>::ActionTuple;
+};
+
+/// For denoting uninitialized eactions.
+template <> struct Action<int> {
 };
 
 // template <typename... Ar> auto actionTuple (Ar &&... args)
@@ -156,26 +163,52 @@ template <typename... Ar> auto action (Ar &&... args) { return actionTuple2<Acti
 //        }
 //};
 
-template <typename T1 = void, typename T2 = void> struct State {
+struct Condition {
+};
+
+template <typename C = int, typename T = int> class Transition {
+public:
+        explicit Transition (StateName sn) : stateName (sn) {}
+        Transition (StateName sn, C c) : stateName (sn), condition (std::move (c)) {}
+        Transition (StateName sn, C c, T t) : stateName (sn), condition (std::move (c)), action (std::move (t)) {}
+
+private:
+        StateName stateName;
+        C condition;
+        Action<T> action;
+};
+
+template <typename... Ts> auto transitions (Ts &&... ts) { return hana::make_tuple (std::forward<Ts> (ts)...); }
+
+template <typename T1 = void, typename T2 = void, typename T3 = int> struct State {
         State () = default;
         explicit State (Entry<T1> en) : entry (std::move (en)) {}
         State (Entry<T1> en, Exit<T2> ex) : entry (std::move (en)), exit (std::move (ex)) {}
 
+        State (Entry<T1> en, Exit<T2> ex, T3 ts) : entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts)) {}
+
         // private:
         Entry<T1> entry;
         Exit<T2> exit;
+        T3 transitions;
 };
 
-struct Transition {
-};
-
+// TODO not here
 class At {
 public:
         At (gsl::czstring<> c) : cmd (c) {}
-        void operator() (auto /*event*/) { std::cout << "usart <- " << cmd << std::endl; }
+        void operator() () { std::cout << "usart <- " << cmd << std::endl; }
 
 private:
         gsl::czstring<> cmd;
+};
+
+// Event : string with operator ==
+// TODO move from here
+struct Eq {
+        Eq (std::string const &t) : t (t) {}
+        bool operator() (auto const &s) const { return s == t; }
+        std::string t;
 };
 
 template <typename S> class Machine {
