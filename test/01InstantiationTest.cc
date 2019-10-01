@@ -10,6 +10,7 @@
 #include "catch.hpp"
 #include <cstring>
 //#include <etl/cstring.h>
+#include <deque>
 #include <iostream>
 #include <unistd.h>
 
@@ -44,15 +45,14 @@ private:
         std::string value;
 };
 
-#if 0
 /**
  * This test only instantiates some bits of state machine and checks if it is even possible.
  */
 TEST_CASE ("First test", "[Instantiation]")
 {
-        State noAction (StateName::A);
+        State noAction ("A"_STATE);
 
-        State state1 (StateName::A,
+        State state1 ("A"_STATE,
                       entry (
                               [](auto &&ev) {
                                       std::cout << "Inline lambda action (" << ev << ")" << std::endl;
@@ -60,7 +60,7 @@ TEST_CASE ("First test", "[Instantiation]")
                               },
                               Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
 
-        State state2 (StateName::A,
+        State state2 ("A"_STATE,
                       entry (
                               [](auto &&ev) {
                                       std::cout << "Inline lambda action (" << ev << ")" << std::endl;
@@ -74,12 +74,11 @@ TEST_CASE ("First test", "[Instantiation]")
                               },
                               Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
 
-        auto state3 = State (StateName::A, entry (At{"ATZ"}, At{"ATDT"}));
+        auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
 
         state2.entry ("hello"s);
         state2.exit ("hello"s);
 }
-#endif
 
 /**
  * Machine instantiated for the forst time.
@@ -98,5 +97,6 @@ TEST_CASE ("Machine instance", "[Instantiation]")
 
                           state ("B"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("C"_STATE, Eq ("OK"), At ("A"), At ("B"))),
                           state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("A"_STATE, Eq ("OK"), At ("A"), At ("B"))));
-        m.run ();
+
+        m.run (std::deque{1, 2, 3});
 }

@@ -157,7 +157,7 @@ std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept;
 
 class StateName {
 public:
-        explicit StateName (gsl::not_null<gsl::czstring<>> s, std::size_t len) : name (s, len) {}
+        explicit StateName (gsl::not_null<gsl::czstring<>> s, std::size_t len) : name (s, len) { Expects (len > 0); }
         friend std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept;
 
 private:
@@ -337,7 +337,7 @@ template <typename S> class Machine {
 public:
         explicit Machine (S s) : states{std::move (s)} {}
 
-        void run ();
+        template <typename Q> void run (Q &&queue);
 
 private:
         S states;                               /// hana::tuple of States.
@@ -346,9 +346,20 @@ private:
 
 template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
 
-template <typename S> void Machine<S>::run ()
+template <typename S> template <typename Q> void Machine<S>::run (Q && /*queue*/)
 {
         hana::for_each (states, [](auto const &state) { std::cout << state.name << std::endl; });
+
+        // Look for initial state if current is empty (std::optional is used).
+        // If it was empty, run initial state's entry action
+
+        // find transition
+
+        // performTransition
+        // - run curent.exit
+        // - run transition.action
+        // - change current name.
+        // - run current.entry
 }
 
 } // namespace ls
