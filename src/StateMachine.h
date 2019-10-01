@@ -148,6 +148,8 @@ TODO żeby nazwy stanów nie musiałby być definiowane osobno w enumie, i żeby
  * TODO The code is so generic, that it sometimes accepts wring type of arguments,
  * like you can pass transition instead of a state. It should be convinient if
  * the compiler reported shuch a misuse on early stage and with meaningful messages.
+ * TODO configurable (as template argument?) output class. Defaults to std::cout. oh,
+ * it also can be a lambda passed to the run method or something.
  */
 
 namespace ls {
@@ -352,8 +354,13 @@ template <typename S> template <typename Q> void Machine<S>::run (Q && /*queue*/
 
         // Look for initial state if current is empty (std::optional is used).
         // If it was empty, run initial state's entry action
+        if (!currentName) {
+                // Find initial state's name
+                // Find that state
+        }
 
         // find transition
+        // - Loop through transitions in current state and pass the events into them.
 
         // performTransition
         // - run curent.exit
