@@ -94,5 +94,7 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                  transitions (Transition (StateName::A, Condition ()))),
 
                           State (entry (At ("Z")), exit (At ("DT"))),
-                          transitions (Transition (StateName::B, Eq ("OK"), action (At ("A"), At ("B")))));
+                          transitions (Transition (StateName::B, Eq ("OK"), action (At ("A"), At ("B")))),
+
+                          state (StateName::A, entry (At ("Z")), exit (At ("DT")), transition (StateName::C, Eq ("OK"), At ("A"), At ("B"))));
 }
