@@ -33,10 +33,10 @@ TEST_CASE ("NoArgsReturnsDone", "[EventNoEvent]")
                 // Done::YES case, where action doesn not want to be run again.
                 int counter = 0;
 
-                State state (entry ([&counter]() {
-                        ++counter;
-                        return Done::YES;
-                }));
+                State state (StateName::A, entry ([&counter]() {
+                                     ++counter;
+                                     return Done::YES;
+                             }));
 
                 state.entry (1);
                 REQUIRE (counter == 1);
@@ -49,10 +49,10 @@ TEST_CASE ("NoArgsReturnsDone", "[EventNoEvent]")
                 // Done::NO case, where action didn't do everything it wanted, so it can be run again later on.
                 int counter = 0;
 
-                State state (entry ([&counter]() {
-                        ++counter;
-                        return Done::NO;
-                }));
+                State state (StateName::A, entry ([&counter]() {
+                                     ++counter;
+                                     return Done::NO;
+                             }));
 
                 state.entry (0);
                 REQUIRE (counter == 1);
@@ -73,7 +73,7 @@ TEST_CASE ("NoArgsNoReturn", "[EventNoEvent]")
 {
         int counter = 0;
 
-        State state (entry ([&counter]() { ++counter; }));
+        State state (StateName::A, entry ([&counter]() { ++counter; }));
 
         state.entry (1);
         REQUIRE (counter == 1);

@@ -28,10 +28,10 @@ TEST_CASE ("Done", "[DoneNotDoneAction]")
 {
         int counter = 0;
 
-        State state (entry ([&counter](auto &) {
-                ++counter;
-                return Done::YES;
-        }));
+        State state (StateName::A, entry ([&counter](auto &) {
+                             ++counter;
+                             return Done::YES;
+                     }));
 
         state.entry (""s);
         REQUIRE (counter == 1);
@@ -56,10 +56,10 @@ TEST_CASE ("NotDone", "[DoneNotDoneAction]")
 {
         int counter = 0;
 
-        State state (entry ([&counter](auto &) {
-                ++counter;
-                return Done::NO;
-        }));
+        State state (StateName::A, entry ([&counter](auto &) {
+                             ++counter;
+                             return Done::NO;
+                     }));
 
         state.entry (""s);
         REQUIRE (counter == 1);
@@ -83,9 +83,7 @@ TEST_CASE ("NoReturnDone", "[DoneNotDoneAction]")
 {
         int counter = 0;
 
-        State state (entry ([&counter](auto) {
-                ++counter;
-        }));
+        State state (StateName::A, entry ([&counter](auto) { ++counter; }));
 
         state.entry (""s);
         REQUIRE (counter == 1);
@@ -93,4 +91,3 @@ TEST_CASE ("NoReturnDone", "[DoneNotDoneAction]")
         state.entry (""s);
         REQUIRE (counter == 1);
 }
-

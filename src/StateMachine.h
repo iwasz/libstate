@@ -143,7 +143,10 @@ TODO żeby nazwy stanów nie musiałby być definiowane osobno w enumie, i żeby
 
 /*
  * NEW todos for the new version
- * - Allow raising an event from inside of actions (somehow).
+ * TODO Allow raising an event from inside of actions (somehow).
+ * TODO The code is so generic, that it sometimes accepts wring type of arguments,
+ * like you can pass transition instead of a state. It should be convinient if
+ * the compiler reported shuch a misuse on early stage and with meaningful messages.
  */
 
 namespace ls {
@@ -154,10 +157,6 @@ enum class StateName { A, B, C };
 /// Do zwracania z akcji.
 enum class Done { NO, YES };
 
-// machine = Machine {State {RESET_STATE, Entry {UsartAction {u, UsartAction::INTERRUPT_ON}}, Exit {}, Transition {PIN_STATUS_STATE, beginsWith
-// ("RDY")}},
-//                   State {}};
-
 /**
  * It's a wrapper for an action which can run it conditionally. It works like that : if 'active' flag is true, the operator()
  * method will run the 'action'. Then, if the return value from that 'action' equals Done::YES, 'active' is flipped to
@@ -165,8 +164,6 @@ enum class Done { NO, YES };
  */
 template <typename T> class ActionRunner {
 public:
-        static constexpr auto returnsDone = hana::is_valid ([](auto &&obj) -> decltype ((void)hana::traits::declval (obj).operator()) {});
-
         explicit ActionRunner (T t) : action (std::move (t)) {}
 
         /**
@@ -242,68 +239,15 @@ template <typename T> struct Exit : public ActionTuple<T> {
         using ActionTuple<T>::ActionTuple;
 };
 
-/// Transition action.
-template <typename T> struct Action : public ActionTuple<T> {
-        using ActionTuple<T>::ActionTuple;
-};
-
-/// For denoting uninitialized eactions.
-template <> struct Action<int> {
-};
-
-// template <typename... Ar> auto actionTuple (Ar &&... args)
-//{
-//        auto tuple = hana::make_tuple (std::forward<Ar> (args)...);
-//        auto at = ActionTuple (std::move (tuple));
-//        return at;
-//}
-
-template <template <typename T> class Tu, typename... Ar> auto actionTuple2 (Ar &&... args)
+template <template <typename T> class Tu, typename... Ar> auto actionTuple (Ar &&... args)
 {
         auto tuple = hana::make_tuple (ActionRunner (std::forward<Ar> (args))...);
         auto at = Tu<decltype (tuple)> (std::move (tuple));
         return at;
 }
 
-template <typename... Ar> auto entry (Ar &&... args) { return actionTuple2<Entry, Ar...> (std::forward<Ar> (args)...); }
-template <typename... Ar> auto exit (Ar &&... args) { return actionTuple2<Exit, Ar...> (std::forward<Ar> (args)...); }
-template <typename... Ar> auto action (Ar &&... args) { return actionTuple2<Action, Ar...> (std::forward<Ar> (args)...); }
-
-// template </*typename Tu,*/ typename... Ar> struct Actions {
-
-//        auto operator() (Ar &&... args)
-//        {
-//                auto tuple = hana::make_tuple (std::forward<Ar> (args)...);
-//                auto at = /*Tu*/ ActionTuple (std::move (tuple));
-//                return at;
-//        }
-//};
-
-// template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry, Ar> (std::forward<Ar> (args)...); }
-
-// template <typename... Ar> struct Actions {
-
-//        explicit Actions (Ar &&... args)
-//        {
-//                auto tuple = hana::make_tuple (std::forward<Ar> (args)...);
-//                auto at = ActionTuple (std::move (tuple));
-//        }
-//};
-
-struct Condition {
-};
-
-// template <typename C = int, typename T = int> class Transition {
-// public:
-//        explicit Transition (StateName sn) : stateName (sn) {}
-//        Transition (StateName sn, C c) : stateName (sn), condition (std::move (c)) {}
-//        Transition (StateName sn, C c, T t) : stateName (sn), condition (std::move (c)), action (std::move (t)) {}
-
-// private:
-//        StateName stateName;
-//        C condition;
-//        Action<T> action;
-//};
+template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry, Ar...> (std::forward<Ar> (args)...); }
+template <typename... Ar> auto exit (Ar &&... args) { return actionTuple<Exit, Ar...> (std::forward<Ar> (args)...); }
 
 template <typename C = int, typename T = int> class Transition {
 public:
@@ -322,25 +266,29 @@ auto transition (StateName sn, auto cond, auto &&... acts)
         return Transition (sn, std::move (cond), hana::tuple (std::forward<decltype (acts)> (acts)...));
 };
 
-template <typename... Ts> auto transitions (Ts &&... ts) { return hana::make_tuple (std::forward<Ts> (ts)...); }
+// template <typename... Ts> auto transitions (Ts &&... ts) { return hana::make_tuple (std::forward<Ts> (ts)...); }
 
 template <typename T1 = void, typename T2 = void, typename T3 = int> class State {
 public:
-        State () = default;
-        explicit State (Entry<T1> en) : entry (std::move (en)) {}
-        State (Entry<T1> en, Exit<T2> ex) : entry (std::move (en)), exit (std::move (ex)) {}
-
-        State (Entry<T1> en, Exit<T2> ex, T3 ts) : entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts)) {}
+        State () = delete;
+        explicit State (StateName sn) : name (sn) {}
+        State (StateName sn, Entry<T1> en) : name (sn), entry (std::move (en)) {}
+        State (StateName sn, Entry<T1> en, Exit<T2> ex) : name (sn), entry (std::move (en)), exit (std::move (ex)) {}
+        State (StateName sn, Entry<T1> en, Exit<T2> ex, T3 ts)
+            : name (sn), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
+        {
+        }
 
         // private:
+        StateName name;
         Entry<T1> entry;
         Exit<T2> exit;
         T3 transitions;
 };
 
-auto state (StateName /*sn*/, auto &&entry, auto &&exit, auto &&... trans)
+auto state (StateName sn, auto &&entry, auto &&exit, auto &&... trans)
 {
-        return State (std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
+        return State (sn, std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
                       hana::tuple (std::forward<decltype (trans)> (trans)...));
 }
 
@@ -354,23 +302,33 @@ private:
         gsl::czstring<> cmd;
 };
 
-// Event : string with operator ==
+/// Event : string with operator ==
 // TODO move from here
 struct Eq {
         Eq (std::string const &t) : t (t) {}
-        bool operator() (auto const &s) const { return s == t; }
+        bool operator() (auto const &ev) const { return ev == t; }
         std::string t;
 };
 
+/**
+ *
+ */
 template <typename S> class Machine {
 public:
         explicit Machine (S s) : states{std::move (s)} {}
 
+        void run ();
+
 private:
-        /// hana::tuple of States.
-        S states;
+        S states;                /// hana::tuple of States.
+        StateName currentName{}; /// Current state name.
 };
 
 template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
+
+template <typename S> void Machine<S>::run ()
+{
+        hana::for_each (states, [](auto const &state) { std::cout << int(state.name) << std::endl; });
+}
 
 } // namespace ls

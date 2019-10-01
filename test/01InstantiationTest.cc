@@ -49,16 +49,18 @@ private:
  */
 TEST_CASE ("First test", "[Instantiation]")
 {
-        State noAction;
+        State noAction (StateName::A);
 
-        State state1 (entry (
-                [](auto &&ev) {
-                        std::cout << "Inline lambda action (" << ev << ")" << std::endl;
-                        return Done::YES;
-                },
-                Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
+        State state1 (StateName::A,
+                      entry (
+                              [](auto &&ev) {
+                                      std::cout << "Inline lambda action (" << ev << ")" << std::endl;
+                                      return Done::YES;
+                              },
+                              Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
 
-        State state2 (entry (
+        State state2 (StateName::A,
+                      entry (
                               [](auto &&ev) {
                                       std::cout << "Inline lambda action (" << ev << ")" << std::endl;
                                       return Done::YES;
@@ -71,7 +73,7 @@ TEST_CASE ("First test", "[Instantiation]")
                               },
                               Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
 
-        auto state3 = State{entry (At{"ATZ"}, At{"ATDT"})};
+        auto state3 = State (StateName::A, entry (At{"ATZ"}, At{"ATDT"}));
 
         state2.entry ("hello"s);
         state2.exit ("hello"s);
@@ -82,8 +84,7 @@ TEST_CASE ("First test", "[Instantiation]")
  */
 TEST_CASE ("Machine instance", "[Instantiation]")
 {
-        int a, b;
-        auto m = machine (State (entry ([] {
+        auto m = machine (state (StateName::A, entry ([] {
                                          std::cout << "1st entry" << std::endl;
                                          return Done::YES;
                                  }),
@@ -91,10 +92,9 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                          std::cout << "1st exit" << std::endl;
                                          return Done::YES;
                                  }),
-                                 transitions (Transition (StateName::A, Condition ()))),
+                                 transition (StateName::B, [] { return true; })),
 
-                          State (entry (At ("Z")), exit (At ("DT"))),
-                          transitions (Transition (StateName::B, Eq ("OK"), action (At ("A"), At ("B")))),
-
-                          state (StateName::A, entry (At ("Z")), exit (At ("DT")), transition (StateName::C, Eq ("OK"), At ("A"), At ("B"))));
+                          state (StateName::B, entry (At ("Z")), exit (At ("DT")), transition (StateName::C, Eq ("OK"), At ("A"), At ("B"))),
+                          state (StateName::C, entry (At ("Z")), exit (At ("DT")), transition (StateName::A, Eq ("OK"), At ("A"), At ("B"))));
+        m.run ();
 }
