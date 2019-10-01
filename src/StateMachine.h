@@ -9,6 +9,7 @@
 #pragma once
 #include <boost/hana.hpp>
 #include <gsl/gsl>
+#include <optional>
 // TODO remove
 #include <string>
 // TODO remove
@@ -151,8 +152,27 @@ TODO żeby nazwy stanów nie musiałby być definiowane osobno w enumie, i żeby
 
 namespace ls {
 
-// TODO replace
-enum class StateName { A, B, C };
+class StateName;
+std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept;
+
+class StateName {
+public:
+        explicit StateName (gsl::not_null<gsl::czstring<>> s, std::size_t len) : name (s, len) {}
+        friend std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept;
+
+private:
+        std::string_view name;
+};
+
+std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept
+{
+        o << s.name;
+        return o;
+}
+
+/// TODO optimize! Use template variant, and comute some unique number (hash) of the string, and use this hash to distinguish between the
+/// StateNames
+StateName operator"" _STATE (const char *s, std::size_t len) { return StateName (s, len); }
 
 /// Do zwracania z akcji.
 enum class Done { NO, YES };
@@ -320,15 +340,15 @@ public:
         void run ();
 
 private:
-        S states;                /// hana::tuple of States.
-        StateName currentName{}; /// Current state name.
+        S states;                               /// hana::tuple of States.
+        std::optional<StateName> currentName{}; /// Current state name.
 };
 
 template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
 
 template <typename S> void Machine<S>::run ()
 {
-        hana::for_each (states, [](auto const &state) { std::cout << int(state.name) << std::endl; });
+        hana::for_each (states, [](auto const &state) { std::cout << state.name << std::endl; });
 }
 
 } // namespace ls

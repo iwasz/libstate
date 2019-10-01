@@ -44,6 +44,7 @@ private:
         std::string value;
 };
 
+#if 0
 /**
  * This test only instantiates some bits of state machine and checks if it is even possible.
  */
@@ -78,13 +79,14 @@ TEST_CASE ("First test", "[Instantiation]")
         state2.entry ("hello"s);
         state2.exit ("hello"s);
 }
+#endif
 
 /**
  * Machine instantiated for the forst time.
  */
 TEST_CASE ("Machine instance", "[Instantiation]")
 {
-        auto m = machine (state (StateName::A, entry ([] {
+        auto m = machine (state ("A"_STATE, entry ([] {
                                          std::cout << "1st entry" << std::endl;
                                          return Done::YES;
                                  }),
@@ -92,9 +94,9 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                          std::cout << "1st exit" << std::endl;
                                          return Done::YES;
                                  }),
-                                 transition (StateName::B, [] { return true; })),
+                                 transition ("B"_STATE, [] { return true; })),
 
-                          state (StateName::B, entry (At ("Z")), exit (At ("DT")), transition (StateName::C, Eq ("OK"), At ("A"), At ("B"))),
-                          state (StateName::C, entry (At ("Z")), exit (At ("DT")), transition (StateName::A, Eq ("OK"), At ("A"), At ("B"))));
+                          state ("B"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("C"_STATE, Eq ("OK"), At ("A"), At ("B"))),
+                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("A"_STATE, Eq ("OK"), At ("A"), At ("B"))));
         m.run ();
 }
