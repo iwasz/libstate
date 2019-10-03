@@ -154,27 +154,28 @@ TODO żeby nazwy stanów nie musiałby być definiowane osobno w enumie, i żeby
 
 namespace ls {
 
-class StateName;
-std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept;
+// template <int I> class StateName;
 
-class StateName {
-public:
-        explicit StateName (gsl::not_null<gsl::czstring<>> s, std::size_t len) : name (s, len) { Expects (len > 0); }
-        friend std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept;
+// template <int I> std::ostream &operator<< (std::ostream &o, StateName<I> const &s) noexcept;
 
-private:
-        std::string_view name;
-};
+// template <int I> class StateName {
+// public:
+//        explicit StateName (gsl::not_null<gsl::czstring<>> s, std::size_t len) : name (s, len) { Expects (len > 0); }
+//        friend std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept;
 
-std::ostream &operator<< (std::ostream &o, StateName const &s) noexcept
-{
-        o << s.name;
-        return o;
-}
+// private:
+//        std::string_view name;
+//};
 
-/// TODO optimize! Use template variant, and comute some unique number (hash) of the string, and use this hash to distinguish between the
-/// StateNames
-StateName operator"" _STATE (const char *s, std::size_t len) { return StateName (s, len); }
+// template <int I> std::ostream &operator<< (std::ostream &o, StateName<I> const &s) noexcept
+//{
+//        o << s.name;
+//        return o;
+//}
+
+///// TODO optimize! Use template variant, and comute some unique number (hash) of the string, and use this hash to distinguish between the
+///// StateNames
+// auto operator"" _STATE (const char *s, std::size_t len) { return StateName <0>(s, len); }
 
 /// Do zwracania z akcji.
 enum class Done { NO, YES };
@@ -271,46 +272,47 @@ template <template <typename T> class Tu, typename... Ar> auto actionTuple (Ar &
 template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry, Ar...> (std::forward<Ar> (args)...); }
 template <typename... Ar> auto exit (Ar &&... args) { return actionTuple<Exit, Ar...> (std::forward<Ar> (args)...); }
 
-template <typename C = int, typename T = int> class Transition {
+template <typename Sn = int, typename C = int, typename T = int> class Transition {
 public:
-        explicit Transition (StateName sn) : stateName (sn) {}
-        Transition (StateName sn, C c) : stateName (sn), condition (std::move (c)) {}
-        Transition (StateName sn, C c, T t) : stateName (sn), condition (std::move (c)), actions (std::move (t)) {}
+        explicit Transition (Sn sn) : stateName (std::move (sn)) {}
+        Transition (Sn sn, C c) : stateName (std::move (sn)), condition (std::move (c)) {}
+        Transition (Sn sn, C c, T t) : stateName (std::move (sn)), condition (std::move (c)), actions (std::move (t)) {}
 
 private:
-        StateName stateName;
+        Sn stateName;
         C condition;
         T actions;
 };
 
-auto transition (StateName sn, auto cond, auto &&... acts)
+auto transition (auto &&sn, auto &&cond, auto &&... acts)
 {
-        return Transition (sn, std::move (cond), hana::tuple (std::forward<decltype (acts)> (acts)...));
+        return Transition (std::forward<decltype (sn)> (sn), std::forward<decltype(cond)> (cond),
+                           hana::tuple (std::forward<decltype (acts)> (acts)...));
 };
 
 // template <typename... Ts> auto transitions (Ts &&... ts) { return hana::make_tuple (std::forward<Ts> (ts)...); }
 
-template <typename T1 = void, typename T2 = void, typename T3 = int> class State {
+template <typename Sn, typename T1 = void, typename T2 = void, typename T3 = int> class State {
 public:
         State () = delete;
-        explicit State (StateName sn) : name (sn) {}
-        State (StateName sn, Entry<T1> en) : name (sn), entry (std::move (en)) {}
-        State (StateName sn, Entry<T1> en, Exit<T2> ex) : name (sn), entry (std::move (en)), exit (std::move (ex)) {}
-        State (StateName sn, Entry<T1> en, Exit<T2> ex, T3 ts)
-            : name (sn), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
+        explicit State (Sn sn) : name (std::move (sn)) {}
+        State (Sn sn, Entry<T1> en) : name (std::move (sn)), entry (std::move (en)) {}
+        State (Sn sn, Entry<T1> en, Exit<T2> ex) : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)) {}
+        State (Sn sn, Entry<T1> en, Exit<T2> ex, T3 ts)
+            : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
         {
         }
 
         // private:
-        StateName name;
+        Sn name;
         Entry<T1> entry;
         Exit<T2> exit;
         T3 transitions;
 };
 
-auto state (StateName sn, auto &&entry, auto &&exit, auto &&... trans)
+auto state (auto &&sn, auto &&entry, auto &&exit, auto &&... trans)
 {
-        return State (sn, std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
+        return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
                       hana::tuple (std::forward<decltype (trans)> (trans)...));
 }
 
@@ -342,10 +344,11 @@ public:
         template <typename Q> void run (Q &&queue);
 
 private:
-        S states;                               /// hana::tuple of States.
-        std::optional<StateName> currentName{}; /// Current state name.
+        S states;                               /// hana::tuple of States. TODO hana map
+        std::optional<int> currentName{}; /// Current state name.
 };
 
+// template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
 template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
 
 template <typename S> template <typename Q> void Machine<S>::run (Q && /*queue*/)
