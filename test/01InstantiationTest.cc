@@ -48,37 +48,56 @@ private:
 /**
  * This test only instantiates some bits of state machine and checks if it is even possible.
  */
-TEST_CASE ("First test", "[Instantiation]")
-{
-        State noAction ("A"_STATE);
+// TEST_CASE ("First test", "[Instantiation]")
+// {
+//         State noAction ("A"_STATE);
 
-        State state1 ("A"_STATE,
-                      entry (
-                              [] (auto &&ev) {
-                                      std::cout << "Inline lambda action (" << ev << ")" << std::endl;
-                                      return Done::YES;
-                              },
-                              Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
+//         State state1 ("A"_STATE,
+//                       entry (
+//                               [] (auto &&ev) {
+//                                       std::cout << "Inline lambda action (" << ev << ")" << std::endl;
+//                                       return Done::YES;
+//                               },
+//                               Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
 
-        State state2 ("A"_STATE,
-                      entry (
-                              [] (auto &&ev) {
-                                      std::cout << "Inline lambda action (" << ev << ")" << std::endl;
-                                      return Done::YES;
-                              },
-                              Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>),
-                      exit (
-                              [] (auto &&ev) {
-                                      std::cout << "Inline lambda action (" << ev << ")" << std::endl;
-                                      return Done::YES;
-                              },
-                              Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
+//         State state2 ("A"_STATE,
+//                       entry (
+//                               [] (auto &&ev) {
+//                                       std::cout << "Inline lambda action (" << ev << ")" << std::endl;
+//                                       return Done::YES;
+//                               },
+//                               Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>),
+//                       exit (
+//                               [] (auto &&ev) {
+//                                       std::cout << "Inline lambda action (" << ev << ")" << std::endl;
+//                                       return Done::YES;
+//                               },
+//                               Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>));
 
-        auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
+//         auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
 
-        state2.entry ("hello"s);
-        state2.exit ("hello"s);
-}
+//         state2.entry ("hello"s);
+//         state2.exit ("hello"s);
+// }
+
+// TEST_CASE ("Simple instance", "[Instantiation]")
+// {
+//         using namespace hana::literals;
+
+//         auto m = machine (state ("INIT"_STATE, entry ([] {
+//                                          std::cout << "1st entry" << std::endl;
+//                                          return Done::YES;
+//                                  }),
+//                                  exit ([] {
+//                                          std::cout << "1st exit" << std::endl;
+//                                          return Done::YES;
+//                                  }),
+//                                  transition ("B"_STATE, [] { return true; }))
+
+//         );
+
+//         m.run (std::deque{1, 2, 3});
+// }
 
 /**
  * Machine instantiated for the first time.
@@ -87,7 +106,7 @@ TEST_CASE ("Machine instance", "[Instantiation]")
 {
         using namespace hana::literals;
 
-        auto m = machine (state ("A"_STATE, entry ([] {
+        auto m = machine (state ("INIT"_STATE, entry ([] {
                                          std::cout << "1st entry" << std::endl;
                                          return Done::YES;
                                  }),
@@ -98,7 +117,7 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                  transition ("B"_STATE, [] { return true; })),
 
                           state ("B"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("C"_STATE, Eq ("OK"), At ("A"), At ("B"))),
-                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("A"_STATE, Eq ("OK"), At ("A"), At ("B"))));
+                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT"))));
 
         m.run (std::deque{1, 2, 3});
 }

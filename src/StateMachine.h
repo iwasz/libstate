@@ -356,13 +356,30 @@ public:
         template <typename Q> void run (Q &&queue);
 
 private:
-        constexpr auto findInitialStatePair () { return hana::pair (1, 2); } // TODO
-        constexpr auto findStatePair (std::type_index const &t) {}
+        auto findInitialState () const;
+        // auto findState (std::type_index const &t);
 
 private:
         S states;                                     /// hana::tuple of States. TODO hana map
         std::optional<std::type_index> currentName{}; /// Current state name. // TODO use type_index
 };
+
+template <typename S> auto Machine<S>::findInitialState () const
+{
+        auto initialState = hana::find_if (states, [] (auto const &state) { return state.name == hana::string_c<'I', 'N', 'I', 'T'>; });
+        static_assert (initialState != hana::nothing);
+        return initialState;
+}
+
+// template <typename S> auto Machine<S>::findState (std::type_index const &t)
+// {
+//         // auto state = hana::find_if (states, [&t] (auto const &state) { return std::type_index (typeid (state)) == t; });
+//         auto state = hana::find_if (states, [&t] (auto const &state) { return hana::bool; });
+//         // static_assert (initialState != hana::nothing);
+//         return state;
+// }
+
+/****************************************************************************/
 
 /// Helper for creating a machine.
 template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
@@ -373,14 +390,32 @@ template <typename S> template <typename Q> void Machine<S>::run (Q && /*queue*/
 
         // Look for initial state if current is empty (std::optional is used).
         if (!currentName) {
-                auto initialStatePair = findInitialStatePair ();
-                currentName = typeid (hana::first (initialStatePair));
-                auto initialState = hana::second (initialStatePair);
+                auto initialState = findInitialState ();
+
+                // currentName = typeid (hana::first (initialStatePair));
+                // auto initialState = hana::second (initialStatePair);
+                currentName = std::type_index (typeid (initialState->name));
+
+                // auto initialState = hana::second (initialStatePair);
                 // initialState.runEntryActions (); // There is no event that caused this action to be fired. We are just starting.
         }
 
         // This is impossible
-        // auto currentState = findStatePair (currentName);
+        Expects (currentName);
+
+        std::cout << "Initial : " << currentName->name () << std::endl;
+
+        // auto currentState = findState (*currentName);
+        hana::for_each (states,
+                        [this] (auto const &state) {
+                                if (std::type_index (typeid (state.name)) == *currentName) {
+                                        std::cout << "*** ";
+                                }
+
+                                std::cout << "State : " << typeid (state.name).name () << std::endl;
+                        }
+
+        );
 
         // find transition
         // - Loop through transitions in current state and pass the events into them.
