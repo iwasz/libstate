@@ -1,2 +1,8 @@
 CMakeLists.txt.user
 build-libstate-*
+.clangd
+.vscode
+CMakeLists.txt.user.22
+CMakeLists.txt.user.4.10-pre1
+build
+compile_commands.json

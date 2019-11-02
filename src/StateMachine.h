@@ -10,6 +10,7 @@
 #include <boost/hana.hpp>
 #include <gsl/gsl>
 #include <optional>
+#include <typeindex>
 // TODO remove
 #include <string>
 // TODO remove
@@ -177,11 +178,14 @@ namespace ls {
 ///// StateNames
 // auto operator"" _STATE (const char *s, std::size_t len) { return StateName <0>(s, len); }
 
+// TODO This is a GNU extension. Provide macro as an option. Or better still, use hana::string explicitly
+template <typename C, C... c> constexpr auto operator""_STATE () { return hana::string_c<c...>; }
+
 /// Do zwracania z akcji.
 enum class Done { NO, YES };
 
 /**
- * It's a wrapper for an action which can run it conditionally. It works like that : if 'active' flag is true, the operator()
+ * It's a wrapper for an action which can run conditionally. It works like that : if 'active' flag is true, the operator()
  * method will run the 'action'. Then, if the return value from that 'action' equals Done::YES, 'active' is flipped to
  * false, and next time the action will not be run.
  */
@@ -241,13 +245,17 @@ public:
 
         template <typename Ev> void operator() (Ev const &event)
         {
-                hana::for_each (actions, [&event](auto &f) { f (event); });
+                hana::for_each (actions, [&event] (auto &f) { f (event); });
         }
 
 private:
         T actions;
 };
 
+/**
+ * This is for creating "default"
+ * TODO consider hana::optional
+ */
 template <> class ActionTuple<void> {
 public:
         ActionTuple () = default;
@@ -272,6 +280,9 @@ template <template <typename T> class Tu, typename... Ar> auto actionTuple (Ar &
 template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry, Ar...> (std::forward<Ar> (args)...); }
 template <typename... Ar> auto exit (Ar &&... args) { return actionTuple<Exit, Ar...> (std::forward<Ar> (args)...); }
 
+/**
+ *
+ */
 template <typename Sn = int, typename C = int, typename T = int> class Transition {
 public:
         explicit Transition (Sn sn) : stateName (std::move (sn)) {}
@@ -284,9 +295,9 @@ private:
         T actions;
 };
 
-auto transition (auto &&sn, auto &&cond, auto &&... acts)
+template <typename Sn, typename Cond, typename... Acts> auto transition (Sn &&sn, Cond &&cond, Acts &&... acts)
 {
-        return Transition (std::forward<decltype (sn)> (sn), std::forward<decltype(cond)> (cond),
+        return Transition (std::forward<decltype (sn)> (sn), std::forward<decltype (cond)> (cond),
                            hana::tuple (std::forward<decltype (acts)> (acts)...));
 };
 
@@ -310,7 +321,7 @@ public:
         T3 transitions;
 };
 
-auto state (auto &&sn, auto &&entry, auto &&exit, auto &&... trans)
+template <typename Sn, typename Entry, typename Exit, typename... Trans> auto state (Sn &&sn, Entry &&entry, Exit &&exit, Trans &&... trans)
 {
         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
                       hana::tuple (std::forward<decltype (trans)> (trans)...));
@@ -329,8 +340,9 @@ private:
 /// Event : string with operator ==
 // TODO move from here
 struct Eq {
-        Eq (std::string const &t) : t (t) {}
-        bool operator() (auto const &ev) const { return ev == t; }
+        Eq (std::string t) : t (std::move (t)) {}
+
+        template <typename Ev> bool operator() (Ev const &ev) const { return ev == t; }
         std::string t;
 };
 
@@ -344,23 +356,31 @@ public:
         template <typename Q> void run (Q &&queue);
 
 private:
-        S states;                               /// hana::tuple of States. TODO hana map
-        std::optional<int> currentName{}; /// Current state name.
+        constexpr auto findInitialStatePair () { return hana::pair (1, 2); } // TODO
+        constexpr auto findStatePair (std::type_index const &t) {}
+
+private:
+        S states;                                     /// hana::tuple of States. TODO hana map
+        std::optional<std::type_index> currentName{}; /// Current state name. // TODO use type_index
 };
 
-// template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
+/// Helper for creating a machine.
 template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
 
 template <typename S> template <typename Q> void Machine<S>::run (Q && /*queue*/)
 {
-        hana::for_each (states, [](auto const &state) { std::cout << state.name << std::endl; });
+        // hana::for_each (states, [](auto const &state) { std::cout << state.name.c_str () << std::endl; });
 
         // Look for initial state if current is empty (std::optional is used).
-        // If it was empty, run initial state's entry action
         if (!currentName) {
-                // Find initial state's name
-                // Find that state
+                auto initialStatePair = findInitialStatePair ();
+                currentName = typeid (hana::first (initialStatePair));
+                auto initialState = hana::second (initialStatePair);
+                // initialState.runEntryActions (); // There is no event that caused this action to be fired. We are just starting.
         }
+
+        // This is impossible
+        // auto currentState = findStatePair (currentName);
 
         // find transition
         // - Loop through transitions in current state and pass the events into them.
