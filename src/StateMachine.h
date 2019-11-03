@@ -10,6 +10,7 @@
 #include <boost/hana.hpp>
 #include <gsl/gsl>
 #include <optional>
+#include <type_traits>
 #include <typeindex>
 // TODO remove
 #include <string>
@@ -146,7 +147,7 @@ TODO żeby nazwy stanów nie musiałby być definiowane osobno w enumie, i żeby
 /*
  * NEW todos for the new version
  * TODO Allow raising an event from inside of actions (somehow).
- * TODO The code is so generic, that it sometimes accepts wring type of arguments,
+ * TODO The code is so generic, that it sometimes accepts wrong type of arguments,
  * like you can pass transition instead of a state. It should be convinient if
  * the compiler reported shuch a misuse on early stage and with meaningful messages.
  * TODO configurable (as template argument?) output class. Defaults to std::cout. oh,
@@ -289,7 +290,8 @@ public:
         Transition (Sn sn, C c) : stateName (std::move (sn)), condition (std::move (c)) {}
         Transition (Sn sn, C c, T t) : stateName (std::move (sn)), condition (std::move (c)), actions (std::move (t)) {}
 
-private:
+        // TODO accessors, getters
+        // private:
         Sn stateName;
         C condition;
         T actions;
@@ -351,7 +353,20 @@ struct Eq {
  */
 template <typename S> class Machine {
 public:
-        explicit Machine (S s) : states{std::move (s)} {}
+        explicit Machine (S s) : states{std::move (s)}
+        {
+                // Look for initial state if current is empty (std::optional is used).
+                auto initialState = findInitialState ();
+
+                // currentName = typeid (hana::first (initialStatePair));
+                // auto initialState = hana::second (initialStatePair);
+                currentName = std::type_index (typeid (initialState->name));
+
+                // auto initialState = hana::second (initialStatePair);
+                // initialState.runEntryActions (); // There is no event that caused this action to be fired. We are just starting.
+
+                std::cout << "Initial : " << initialState->name.c_str () << std::endl;
+        }
 
         template <typename Q> void run (Q &&queue);
 
@@ -384,41 +399,53 @@ template <typename S> auto Machine<S>::findInitialState () const
 /// Helper for creating a machine.
 template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
 
-template <typename S> template <typename Q> void Machine<S>::run (Q && /*queue*/)
+template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue)
 {
-        // hana::for_each (states, [](auto const &state) { std::cout << state.name.c_str () << std::endl; });
+        std::cout << "Run" << std::endl;
 
-        // Look for initial state if current is empty (std::optional is used).
-        if (!currentName) {
-                auto initialState = findInitialState ();
-
-                // currentName = typeid (hana::first (initialStatePair));
-                // auto initialState = hana::second (initialStatePair);
-                currentName = std::type_index (typeid (initialState->name));
-
-                // auto initialState = hana::second (initialStatePair);
-                // initialState.runEntryActions (); // There is no event that caused this action to be fired. We are just starting.
-        }
-
-        // This is impossible
         Expects (currentName);
 
-        std::cout << "Initial : " << currentName->name () << std::endl;
+        std::type_index &currentStateNameCopy = *currentName;
 
-        // auto currentState = findState (*currentName);
         hana::for_each (states,
-                        [this] (auto const &state) {
-                                if (std::type_index (typeid (state.name)) == *currentName) {
-                                        std::cout << "*** ";
+                        [&currentStateNameCopy, &eventQueue] (auto /*const?*/ &state) {
+                                // Find currentState @ runTime
+                                if (std::type_index (typeid (state.name)) != currentStateNameCopy) {
+                                        return;
                                 }
 
-                                std::cout << "State : " << typeid (state.name).name () << std::endl;
+                                std::cout << "Current  : " << state.name.c_str () << std::endl;
+
+                                // find transition
+                                // - Loop through transitions in current state and pass the events into them.
+                                hana::for_each (state.transitions, [&currentStateNameCopy, &eventQueue, &state] (auto &transition) {
+                                        std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
+
+                                        for (auto event : eventQueue) {
+                                                static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
+                                                               "Type mismatch between an event, and a condition(s) which checks this event.");
+
+                                                if (transition.condition (event)) {
+                                                        state.exit (event);
+                                                        currentStateNameCopy = std::type_index (typeid (transition.stateName));
+
+                                                        hana::for_each (transition.actions, [&event] (auto &action) {
+                                                                if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
+                                                                        action (event);
+                                                                }
+                                                                else {
+                                                                        action ();
+                                                                }
+                                                        });
+
+                                                        eventQueue.clear ();
+                                                        return;
+                                                }
+                                        }
+                                });
                         }
 
         );
-
-        // find transition
-        // - Loop through transitions in current state and pass the events into them.
 
         // performTransition
         // - run curent.exit
