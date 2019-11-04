@@ -23,12 +23,12 @@ namespace ls {
 enum class Done { NO, YES };
 
 // TODO This is a stub!
-// class ErasedAction {
+// class Command {
 // public:
 //         using ActionInterface = Done ();
 
-//         ErasedAction (void *a) : action{a} {}
-//         // ErasedAction (void *a) : action{a} {}
+//         Command (void *a) : action{a} {}
+//         // Command (void *a) : action{a} {}
 
 //         Done operator() () { return (*reinterpret_cast<ActionInterface *> (action)) (); }
 
@@ -36,12 +36,12 @@ enum class Done { NO, YES };
 // };
 
 // TODO reimplement, get rid of std::function.
-class ErasedAction {
+class Command {
 public:
         using ActionInterface = Done ();
 
-        template <typename A> ErasedAction (A a) : action{std::move (a)} {}
-        // ErasedAction (void *a) : action{a} {}
+        template <typename A> Command (A a) : action{std::move (a)} {}
+        // Command (void *a) : action{a} {}
 
         Done operator() () { return action (); }
 
@@ -49,7 +49,7 @@ public:
 };
 
 // TODO etl
-using ErasedActionList = std::list<ErasedAction>;
+using ErasedActionList = std::list<Command>;
 
 /**
  * It's a wrapper for an action which , depending on its interface will run it (if the
@@ -76,7 +76,7 @@ public:
                 }
                 else {                                                                 // Action does not accept arguments
                         if constexpr (std::is_same_v<std::invoke_result_t<T>, Done>) { // But it returns Done.
-                                erasedActionList.push_back (ErasedAction (action));
+                                erasedActionList.push_back (Command (action));
                         }
                         else {
                                 action (); // Doesn't either accept an arg or return.

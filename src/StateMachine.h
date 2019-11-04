@@ -193,7 +193,7 @@ template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue
                                         // currentStateNameCopy = std::type_index (typeid (transition.stateName));
                                         auto nextStateName = std::type_index (typeid (transition.stateName));
 
-                                        eaList.push_back (ErasedAction{[&currentStateNameCopy, nextStateName] () {
+                                        eaList.push_back (Command{[&currentStateNameCopy, nextStateName] () {
                                                 currentStateNameCopy = nextStateName;
                                                 return Done::YES;
                                         }});
@@ -214,9 +214,12 @@ template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue
 
 template <typename S> Done Machine<S>::runLongActions ()
 {
+        // Assue this is a member fo Machine class
+        int retainedEvent = 66;
+
         // Long actions.
         for (auto i = erasedActionList.begin (); i != erasedActionList.end ();) {
-                Done d = (*i) (); // Call the action
+                Done d = (*i) (/* retainedEvent */); // Call the action
 
                 if (d == Done::NO) {
                         return Done::NO;
