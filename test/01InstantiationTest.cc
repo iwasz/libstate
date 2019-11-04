@@ -129,17 +129,3 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         m.run (std::deque<int>{}); // 3rd call, and state change.
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("FINAL"_STATE)));
 }
-
-/**
- *
- */
-TEST_CASE ("Action basic test", "[Action]")
-{
-        auto action = [] {
-                std::cout << "Action : " << std::endl;
-                return Done::YES;
-        };
-
-        ErasedAction ea{action};
-        ea ();
-}
