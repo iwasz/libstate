@@ -360,7 +360,13 @@ template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue
                                                 });
 
                                                 // Change current name.
-                                                currentStateNameCopy = std::type_index (typeid (transition.stateName));
+                                                // currentStateNameCopy = std::type_index (typeid (transition.stateName));
+                                                auto nextStateName = std::type_index (typeid (transition.stateName));
+
+                                                eaList.push_back (ErasedAction{[&currentStateNameCopy, nextStateName] () {
+                                                        currentStateNameCopy = nextStateName;
+                                                        return Done::YES;
+                                                }});
 
                                                 // - run current.entry
 

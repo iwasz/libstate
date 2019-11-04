@@ -90,10 +90,12 @@ TEST_CASE ("Machine instance", "[Instantiation]")
 
                           state ("C"_STATE, entry (At ("Z")), exit ([] {
                                          static int cnt = 0;
-                                         if (++cnt > 3) {
+                                         if (++cnt >= 3) {
+                                                 std::cout << "Delay DONE" << std::endl;
                                                  return Done::YES;
                                          }
                                          else {
+                                                 std::cout << "Delay..." << std::endl;
                                                  return Done::NO;
                                          }
                                  }),
@@ -109,17 +111,27 @@ TEST_CASE ("Machine instance", "[Instantiation]")
          * fires upon event '2', the state is changed.
          */
         m.run (std::deque{1, 2});
+        m.run (std::deque<int>{});
 
         // State is successfully changed to "B"_STATE.
         REQUIRE (m.getCurrentStateName ());
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
 
         m.run (std::deque{3});
+        m.run (std::deque<int>{});
 
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
 
-        m.run (std::deque{4, 5});
+        m.run (std::deque{4, 5}); // Transition condition is satisfied, but exit action has to be run 3 times until it actually finishes
+        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
 
+        m.run (std::deque<int>{});
+        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
+
+        m.run (std::deque<int>{});
+        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
+
+        m.run (std::deque<int>{});
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("FINAL"_STATE)));
 }
 
