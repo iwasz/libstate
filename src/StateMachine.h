@@ -275,7 +275,7 @@ public:
 
 private:
         auto findInitialState () const;
-        // auto findState (std::type_index const &t);
+        Done runLongActions ();
 
 private:
         S states;                                     /// boost::hana::tuple of States. TODO hana map
@@ -302,82 +302,89 @@ template <typename S> auto Machine<S>::findInitialState () const
 
 template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue)
 {
-        // Long actions.
-        for (auto i = erasedActionList.begin (); i != erasedActionList.end ();) {
-                Done d = (*i) (); // Call the action
-
-                if (d != Done::YES) {
-                        return;
-                }
-
-                auto j = i++;
-                erasedActionList.erase (j);
+        if (runLongActions () == Done::NO) {
+                return;
         }
 
-        std::cout << "Run" << std::endl;
+        std::cout << "== Run ==" << std::endl;
 
         Expects (currentName);
 
         std::type_index &currentStateNameCopy = *currentName;
         ErasedActionList &eaList = erasedActionList;
 
-        boost::hana::for_each (
-                states,
-                [&eaList, &currentStateNameCopy, &eventQueue] (auto /*const?*/ &state) {
-                        // Find currentState @ runTime
-                        if (std::type_index (typeid (state.name)) != currentStateNameCopy) {
-                                return;
-                        }
-
-                        std::cout << "Current  : " << state.name.c_str () << std::endl;
-
-                        // find transition
-                        // - Loop through transitions in current state and pass the events into them.
-                        boost::hana::for_each (state.transitions, [&eaList, &currentStateNameCopy, &eventQueue, &state] (auto &transition) {
-                                std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
-
-                                for (auto event : eventQueue) {
-                                        static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
-                                                       "Type mismatch between an event, and a condition(s) which checks this event.");
-
-                                        // Perform the transition
-                                        if (transition.condition (event)) {
-
-                                                // Run curent.exit
-                                                state.exit (eaList, event);
-
-                                                // TODO Delay actions / and / or arbitrary "coroutine actions"
-
-                                                // TODO Action tuple, action runner.
-                                                // Run transition.action
-                                                boost::hana::for_each (transition.actions, [&event] (auto &action) {
-                                                        if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
-                                                                action (event);
-                                                        }
-                                                        else {
-                                                                action ();
-                                                        }
-                                                });
-
-                                                // Change current name.
-                                                // currentStateNameCopy = std::type_index (typeid (transition.stateName));
-                                                auto nextStateName = std::type_index (typeid (transition.stateName));
-
-                                                eaList.push_back (ErasedAction{[&currentStateNameCopy, nextStateName] () {
-                                                        currentStateNameCopy = nextStateName;
-                                                        return Done::YES;
-                                                }});
-
-                                                // - run current.entry
-
-                                                eventQueue.clear ();
-                                                return;
-                                        }
-                                }
-                        });
+        boost::hana::for_each (states, [&eaList, &currentStateNameCopy, &eventQueue] (auto /*const?*/ &state) {
+                // Find currentState @ runTime
+                if (std::type_index (typeid (state.name)) != currentStateNameCopy) {
+                        return;
                 }
 
-        );
+                std::cout << "Current  : " << state.name.c_str () << std::endl;
+
+                // find transition
+                // - Loop through transitions in current state and pass the events into them.
+                boost::hana::for_each (state.transitions, [&eaList, &currentStateNameCopy, &eventQueue, &state] (auto &transition) {
+                        std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
+
+                        for (auto event : eventQueue) {
+                                static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
+                                               "Type mismatch between an event, and a condition(s) which checks this event.");
+
+                                // Perform the transition
+                                if (transition.condition (event)) {
+
+                                        // Run curent.exit
+                                        state.exit (eaList, event);
+
+                                        // TODO Action tuple, action runner.
+                                        // Run transition.action
+                                        boost::hana::for_each (transition.actions, [&event] (auto &action) {
+                                                if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
+                                                        action (event);
+                                                }
+                                                else {
+                                                        action ();
+                                                }
+                                        });
+
+                                        // Change current name.
+                                        // currentStateNameCopy = std::type_index (typeid (transition.stateName));
+                                        auto nextStateName = std::type_index (typeid (transition.stateName));
+
+                                        eaList.push_back (ErasedAction{[&currentStateNameCopy, nextStateName] () {
+                                                currentStateNameCopy = nextStateName;
+                                                return Done::YES;
+                                        }});
+
+                                        // - run current.entry
+
+                                        eventQueue.clear ();
+                                        return;
+                                }
+                        }
+                });
+        });
+
+        runLongActions ();
+}
+
+/****************************************************************************/
+
+template <typename S> Done Machine<S>::runLongActions ()
+{
+        // Long actions.
+        for (auto i = erasedActionList.begin (); i != erasedActionList.end ();) {
+                Done d = (*i) (); // Call the action
+
+                if (d == Done::NO) {
+                        return Done::NO;
+                }
+
+                auto j = i++;
+                erasedActionList.erase (j);
+        }
+
+        return Done::YES;
 }
 
 } // namespace ls
