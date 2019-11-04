@@ -7,20 +7,17 @@
  ****************************************************************************/
 
 #pragma once
+#include "Action.h"
 #include <boost/hana.hpp>
 #include <gsl/gsl>
 #include <optional>
 #include <type_traits>
 #include <typeindex>
+
 // TODO remove
 #include <string>
 // TODO remove
 #include <iostream>
-
-// TODO remove thise statements
-namespace hana = boost::hana;
-using namespace hana::literals;
-using namespace std::string_literals;
 
 /**
  * Copy (in Polish) of TODOs from the previous version of the lib.
@@ -152,6 +149,9 @@ TODO żeby nazwy stanów nie musiałby być definiowane osobno w enumie, i żeby
  * the compiler reported shuch a misuse on early stage and with meaningful messages.
  * TODO configurable (as template argument?) output class. Defaults to std::cout. oh,
  * it also can be a lambda passed to the run method or something.
+
+TODO events as std::tuples or std::pairs, and then actions and conditions would get parameter pack of arguments.
+
  */
 
 namespace ls {
@@ -180,106 +180,7 @@ namespace ls {
 // auto operator"" _STATE (const char *s, std::size_t len) { return StateName <0>(s, len); }
 
 // TODO This is a GNU extension. Provide macro as an option. Or better still, use hana::string explicitly
-template <typename C, C... c> constexpr auto operator""_STATE () { return hana::string_c<c...>; }
-
-/// Do zwracania z akcji.
-enum class Done { NO, YES };
-
-/**
- * It's a wrapper for an action which can run conditionally. It works like that : if 'active' flag is true, the operator()
- * method will run the 'action'. Then, if the return value from that 'action' equals Done::YES, 'active' is flipped to
- * false, and next time the action will not be run.
- */
-template <typename T> class ActionRunner {
-public:
-        explicit ActionRunner (T t) : action (std::move (t)) {}
-
-        /**
-         * It does not have to use paramater pack. I think actions API will always have
-         * only one parameter, but let leave it for now.
-         */
-        template <typename... Arg> void operator() (Arg &&... a)
-        {
-                if (!active) {
-                        return;
-                }
-
-                Done done = Done::YES;
-
-                if constexpr (std::is_invocable<T, Arg...>::value) {
-                        if constexpr (std::is_same<typename std::result_of<T (Arg...)>::type, Done>::value) {
-                                done = action (std::forward<Arg> (a)...);
-                        }
-                        else {
-                                action (std::forward<Arg> (a)...);
-                        }
-                }
-                else {
-                        if constexpr (std::is_same<typename std::result_of<T ()>::type, Done>::value) {
-                                done = action ();
-                        }
-                        else {
-                                action ();
-                        }
-                }
-
-                if (done == Done::YES) {
-                        active = false;
-                }
-        }
-
-        void reset () noexcept { active = true; }
-        bool isActive () const noexcept { return active; }
-        void setActive (bool b) noexcept { active = b; }
-
-private:
-        bool active = true;
-        T action;
-};
-
-/**
- * Tuple of actions.
- */
-template <typename T> class ActionTuple {
-public:
-        explicit ActionTuple (T a) : actions{std::move (a)} {}
-
-        template <typename Ev> void operator() (Ev const &event)
-        {
-                hana::for_each (actions, [&event] (auto &f) { f (event); });
-        }
-
-private:
-        T actions;
-};
-
-/**
- * This is for creating "default"
- * TODO consider hana::optional
- */
-template <> class ActionTuple<void> {
-public:
-        ActionTuple () = default;
-        template <typename Ev> void operator() (Ev const & /*event*/) {}
-};
-
-template <typename T> struct Entry : public ActionTuple<T> {
-        using ActionTuple<T>::ActionTuple;
-};
-
-template <typename T> struct Exit : public ActionTuple<T> {
-        using ActionTuple<T>::ActionTuple;
-};
-
-template <template <typename T> class Tu, typename... Ar> auto actionTuple (Ar &&... args)
-{
-        auto tuple = hana::make_tuple (ActionRunner (std::forward<Ar> (args))...);
-        auto at = Tu<decltype (tuple)> (std::move (tuple));
-        return at;
-}
-
-template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry, Ar...> (std::forward<Ar> (args)...); }
-template <typename... Ar> auto exit (Ar &&... args) { return actionTuple<Exit, Ar...> (std::forward<Ar> (args)...); }
+template <typename C, C... c> constexpr auto operator""_STATE () { return boost::hana::string_c<c...>; }
 
 /**
  *
@@ -300,7 +201,7 @@ public:
 template <typename Sn, typename Cond, typename... Acts> auto transition (Sn &&sn, Cond &&cond, Acts &&... acts)
 {
         return Transition (std::forward<decltype (sn)> (sn), std::forward<decltype (cond)> (cond),
-                           hana::tuple (std::forward<decltype (acts)> (acts)...));
+                           boost::hana::tuple (std::forward<decltype (acts)> (acts)...));
 };
 
 // template <typename... Ts> auto transitions (Ts &&... ts) { return hana::make_tuple (std::forward<Ts> (ts)...); }
@@ -326,7 +227,7 @@ public:
 template <typename Sn, typename Entry, typename Exit, typename... Trans> auto state (Sn &&sn, Entry &&entry, Exit &&exit, Trans &&... trans)
 {
         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
-                      hana::tuple (std::forward<decltype (trans)> (trans)...));
+                      boost::hana::tuple (std::forward<decltype (trans)> (trans)...));
 }
 
 // TODO not here
@@ -358,11 +259,11 @@ public:
                 // Look for initial state if current is empty (std::optional is used).
                 auto initialState = findInitialState ();
 
-                // currentName = typeid (hana::first (initialStatePair));
-                // auto initialState = hana::second (initialStatePair);
+                // currentName = typeid (boost::hana::first (initialStatePair));
+                // auto initialState = boost::hana::second (initialStatePair);
                 currentName = std::type_index (typeid (initialState->name));
 
-                // auto initialState = hana::second (initialStatePair);
+                // auto initialState = boost::hana::second (initialStatePair);
                 // initialState.runEntryActions (); // There is no event that caused this action to be fired. We are just starting.
 
                 std::cout << "Initial : " << initialState->name.c_str () << std::endl;
@@ -370,88 +271,107 @@ public:
 
         template <typename Q> void run (Q &&queue);
 
+        auto getCurrentStateName () const { return currentName; }
+
 private:
         auto findInitialState () const;
         // auto findState (std::type_index const &t);
 
 private:
-        S states;                                     /// hana::tuple of States. TODO hana map
+        S states;                                     /// boost::hana::tuple of States. TODO hana map
         std::optional<std::type_index> currentName{}; /// Current state name. // TODO use type_index
+        ErasedActionList erasedActionList;            /// List of actions that run longer.
 };
 
-template <typename S> auto Machine<S>::findInitialState () const
-{
-        auto initialState = hana::find_if (states, [] (auto const &state) { return state.name == hana::string_c<'I', 'N', 'I', 'T'>; });
-        static_assert (initialState != hana::nothing);
-        return initialState;
-}
+/*--------------------------------------------------------------------------*/
 
-// template <typename S> auto Machine<S>::findState (std::type_index const &t)
-// {
-//         // auto state = hana::find_if (states, [&t] (auto const &state) { return std::type_index (typeid (state)) == t; });
-//         auto state = hana::find_if (states, [&t] (auto const &state) { return hana::bool; });
-//         // static_assert (initialState != hana::nothing);
-//         return state;
-// }
+/// Helper for creating a machine.
+template <typename... Sts> auto machine (Sts &&... states) { return Machine (boost::hana::make_tuple (std::forward<Sts> (states)...)); }
 
 /****************************************************************************/
 
-/// Helper for creating a machine.
-template <typename... Sts> auto machine (Sts &&... states) { return Machine (hana::make_tuple (std::forward<Sts> (states)...)); }
+template <typename S> auto Machine<S>::findInitialState () const
+{
+        auto initialState
+                = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'I', 'N', 'I', 'T'>; });
+        static_assert (initialState != boost::hana::nothing);
+        return initialState;
+}
+
+/****************************************************************************/
 
 template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue)
 {
+        // Long actions.
+        for (auto i = erasedActionList.begin (); i != erasedActionList.end ();) {
+                Done d = (*i) (); // Call the action
+
+                if (d != Done::YES) {
+                        return;
+                }
+
+                auto j = i++;
+                erasedActionList.erase (j);
+        }
+
         std::cout << "Run" << std::endl;
 
         Expects (currentName);
 
         std::type_index &currentStateNameCopy = *currentName;
+        ErasedActionList &eaList = erasedActionList;
 
-        hana::for_each (states,
-                        [&currentStateNameCopy, &eventQueue] (auto /*const?*/ &state) {
-                                // Find currentState @ runTime
-                                if (std::type_index (typeid (state.name)) != currentStateNameCopy) {
-                                        return;
-                                }
-
-                                std::cout << "Current  : " << state.name.c_str () << std::endl;
-
-                                // find transition
-                                // - Loop through transitions in current state and pass the events into them.
-                                hana::for_each (state.transitions, [&currentStateNameCopy, &eventQueue, &state] (auto &transition) {
-                                        std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
-
-                                        for (auto event : eventQueue) {
-                                                static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
-                                                               "Type mismatch between an event, and a condition(s) which checks this event.");
-
-                                                if (transition.condition (event)) {
-                                                        state.exit (event);
-                                                        currentStateNameCopy = std::type_index (typeid (transition.stateName));
-
-                                                        hana::for_each (transition.actions, [&event] (auto &action) {
-                                                                if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
-                                                                        action (event);
-                                                                }
-                                                                else {
-                                                                        action ();
-                                                                }
-                                                        });
-
-                                                        eventQueue.clear ();
-                                                        return;
-                                                }
-                                        }
-                                });
+        boost::hana::for_each (
+                states,
+                [&eaList, &currentStateNameCopy, &eventQueue] (auto /*const?*/ &state) {
+                        // Find currentState @ runTime
+                        if (std::type_index (typeid (state.name)) != currentStateNameCopy) {
+                                return;
                         }
 
-        );
+                        std::cout << "Current  : " << state.name.c_str () << std::endl;
 
-        // performTransition
-        // - run curent.exit
-        // - run transition.action
-        // - change current name.
-        // - run current.entry
+                        // find transition
+                        // - Loop through transitions in current state and pass the events into them.
+                        boost::hana::for_each (state.transitions, [&eaList, &currentStateNameCopy, &eventQueue, &state] (auto &transition) {
+                                std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
+
+                                for (auto event : eventQueue) {
+                                        static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
+                                                       "Type mismatch between an event, and a condition(s) which checks this event.");
+
+                                        // Perform the transition
+                                        if (transition.condition (event)) {
+
+                                                // Run curent.exit
+                                                state.exit (eaList, event);
+
+                                                // TODO Delay actions / and / or arbitrary "coroutine actions"
+
+                                                // TODO Action tuple, action runner.
+                                                // Run transition.action
+                                                boost::hana::for_each (transition.actions, [&event] (auto &action) {
+                                                        if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
+                                                                action (event);
+                                                        }
+                                                        else {
+                                                                action ();
+                                                        }
+                                                });
+
+                                                // Change current name.
+                                                currentStateNameCopy = std::type_index (typeid (transition.stateName));
+
+                                                // - run current.entry
+
+                                                eventQueue.clear ();
+                                                return;
+                                        }
+                                }
+                        });
+                }
+
+        );
 }
 
 } // namespace ls

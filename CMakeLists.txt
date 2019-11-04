@@ -22,6 +22,7 @@ ADD_EXECUTABLE (unittest
     "${CATCH2_INCLUDE}/catch.hpp"
 
     "src/StateMachine.h"
+    "src/Action.h"
 
     #"test/etl_profile.h"
     "test/00CatchInit.cc"

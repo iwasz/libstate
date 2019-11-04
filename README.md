@@ -9,3 +9,13 @@
   whenever possible).
 * Nullary conditions does not work.
 * Meaningful message when condition argumnet type is incompatible with event type, and so on.
+
+# Features
+* No dynamic allocations.
+
+
+# Dependencies
+* Boost hana
+* GSL
+* etl
+* Catch2
