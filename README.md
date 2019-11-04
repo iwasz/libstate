@@ -3,10 +3,10 @@
 * Action callback interface options : can return Done or void, can take an Event argument or void.
 
 # Milestones
-* Static, typesafe API.
-* Changing states.
-* Running actions in correct order (partially)
-* Retained input.
+1. Static, typesafe API.
+1. Changing states.
+1. Running actions in correct order (partially)
+1. Retained input.
 
 # TODO
 * All sorts of misuses should be pointed out in compile time with meaningful messages (use static_asserts 
