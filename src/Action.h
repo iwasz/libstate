@@ -9,6 +9,7 @@
 #pragma once
 #include <boost/hana.hpp>
 #include <boost/hana/fwd/unpack.hpp>
+#include <chrono>
 #include <gsl/gsl>
 #include <optional>
 #include <type_traits>
@@ -24,6 +25,12 @@ namespace ls {
 enum class Done { NO, YES };
 
 using Delay = int;
+
+template <typename> struct IsDuration : public std::false_type {
+};
+
+template <typename Rep, typename Period> struct IsDuration<std::chrono::duration<Rep, Period>> : public std::true_type {
+};
 
 /**
  * It's a wrapper for an action which , depending on its interface will run it (if the
@@ -49,18 +56,35 @@ public:
                 // TODO better checks, static asserts and meaningful error mesages.
                 active = false;
 
+                // constexpr bool hasEventArgument = std::is_invocable_v<T, Arg...>;
+                // constexpr
+                // static_assert ();
+
                 if constexpr (std::is_invocable_v<T, Arg...>) { // Action accepts arguments
-                        action (std::forward<Arg> (a)...);
-                        static_assert (std::is_same_v<std::invoke_result_t<T, Arg...>, void>, "Wrong action interface.");
-                        return {};
+
+                        if constexpr (IsDuration<std::invoke_result_t<T, Arg...>>::value) {
+                        }
+                        else {
+                                static_assert (std::is_same_v<std::invoke_result_t<T, Arg...>, void>,
+                                               "Wrong action return value. Use either std::chrono::duration <R, P> or void.");
+                                action (std::forward<Arg> (a)...);
+                                return {};
+                        }
                 }
-                else {                                                                 // Action does not accept arguments
-                        if constexpr (std::is_same_v<std::invoke_result_t<T>, Done>) { // But it returns Done.
+                else { // Action does not accept arguments
+                        static_assert (
+                                std::is_invocable_v<T>,
+                                "Wrong action argument type(s). Action argument has to be compatible with the event type or there should be no "
+                                "arguments at all.");
+
+                        if constexpr (IsDuration<std::invoke_result_t<T>>::value) { // But it returns Done.
                                 // erasedActionList.push_back (Command (action));
                                 // TODO!!! Wait
                                 return Delay{1000};
                         }
                         else {
+                                static_assert (std::is_same_v<std::invoke_result_t<T>, void>,
+                                               "Wrong action return value. Use either std::chrono::duration <R, P> or void.");
                                 action (); // Doesn't either accept an arg or return.
                                 return {};
                         }
