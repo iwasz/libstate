@@ -114,11 +114,12 @@ public:
                 // TODO clever unpacking if event is a tuple or pair.
                 // boost::hana::for_each (actions, [&event] (auto &f) { f (event); });
 
-                return boost::hana::unpack (actions, [&event] (auto &... args) {
+                return boost::hana::unpack (actions, [&event, this] (auto &... args) {
                         if constexpr (sizeof...(args) > 0) {
                                 return processActionRunners (event, args...);
                         }
 
+                        reset ();
                         return Delay{};
                 });
         }
@@ -135,7 +136,6 @@ private:
 
 /**
  * This is for creating "default"
- * TODO consider boost::hana::optional
  */
 template <> class ActionTuple<void> {
 public:

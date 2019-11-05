@@ -10,6 +10,8 @@
 #include "Action.h"
 #include "Misc.h"
 #include <boost/hana.hpp>
+#include <boost/hana/fwd/integral_constant.hpp>
+#include <boost/hana/fwd/length.hpp>
 #include <boost/hana/fwd/unpack.hpp>
 #include <chrono>
 #include <gsl/gsl>
@@ -52,7 +54,7 @@ template <typename Sn, typename Cond, typename... Acts> auto transition (Sn &&sn
 
 // template <typename... Ts> auto transitions (Ts &&... ts) { return hana::make_tuple (std::forward<Ts> (ts)...); }
 
-template <typename Sn, typename T1 = void, typename T2 = void, typename T3 = int> class State {
+template <typename Sn, typename T1 = void, typename T2 = void, typename T3 = boost::hana::tuple<>> class State {
 public:
         State () = delete;
         explicit State (Sn sn) : name (std::move (sn)) {}
@@ -74,6 +76,11 @@ template <typename Sn, typename Entry, typename Exit, typename... Trans> auto st
 {
         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
                       boost::hana::tuple (std::forward<decltype (trans)> (trans)...));
+}
+
+template <typename Sn, typename Entry> auto state (Sn &&sn, Entry &&entry)
+{
+        return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry));
 }
 
 /**
@@ -127,7 +134,7 @@ template <typename S> auto Machine<S>::findInitialState () const
 {
         auto initialState
                 = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'I', 'N', 'I', 'T'>; });
-        static_assert (initialState != boost::hana::nothing);
+        static_assert (initialState != boost::hana::nothing, "Initial state has to be named \"INIT\"_STATE and it must be defined.");
         return initialState;
 }
 
@@ -150,15 +157,17 @@ StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, 
                         std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
 
                         // Run curent.exit
-                        Delay d = state.exit (event);
-
-                        if (d != Delay::zero ()) {
+                        if (Delay d = state.exit (event); d != Delay::zero ()) {
                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
                                           << std::endl;
                                 return {{}, d};
                         }
 
-                        transition.actions (event);
+                        if (Delay d = transition.actions (event); d != Delay::zero ()) {
+                                std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
+                                          << std::endl;
+                                return {{}, d};
+                        }
 
                         // Change current name.
                         auto ret = std::optional<std::type_index> (typeid (transition.stateName));
@@ -187,13 +196,18 @@ StateProcessResult processStates (std::type_index const &currentStateTi, Q &&eve
         if (std::type_index (typeid (state.name)) == currentStateTi) {
                 std::cout << "Current  : " << state.name.c_str () << std::endl;
 
-                return boost::hana::unpack (state.transitions, [&eventQueue, &state] (auto &... trans) -> StateProcessResult {
-                        if constexpr (sizeof...(trans)) {
-                                return processTransitions (eventQueue, state, trans...);
-                        }
+                if constexpr (boost::hana::length (state.transitions) != boost::hana::size_c<0>) { // TODO maybe remove this if constexpr
+                        return boost::hana::unpack (state.transitions, [&eventQueue, &state] (auto &... trans) -> StateProcessResult {
+                                if constexpr (sizeof...(trans)) {
+                                        return processTransitions (eventQueue, state, trans...);
+                                }
 
+                                return {};
+                        });
+                }
+                else {
                         return {};
-                });
+                }
         }
 
         if constexpr (sizeof...(rest) > 0) {

@@ -9,6 +9,7 @@
 1. Retained input.
 
 # TODO
+* Consider adding input actions, I might be wrong, but I think I used one of those in MC60 (forgetting abit the name "input action").
 * All sorts of misuses should be pointed out in compile time with meaningful messages (use static_asserts 
   whenever possible).
 * Nullary conditions does not work.

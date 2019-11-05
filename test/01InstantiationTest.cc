@@ -8,14 +8,16 @@
 
 #include "Action.h"
 #include "StateMachine.h"
+#include "Utils.h"
 #include "catch.hpp"
 #include <chrono>
 #include <cstring>
-//#include <etl/cstring.h>
 #include <deque>
 #include <iostream>
 #include <type_traits>
 #include <unistd.h>
+
+/****************************************************************************/
 
 namespace hana = boost::hana;
 using namespace hana::literals;
@@ -23,7 +25,8 @@ using namespace std::string_literals;
 using namespace std::chrono_literals;
 using namespace ls;
 
-// Nigdzie nie używam czegoś takiego, ale miło by było móc.
+/****************************************************************************/
+
 template <typename T> void actionFunctionTemplate (T &&event) { std::cout << "actionFunctionTemplate (" << event << ")" << std::endl; }
 
 void actionFunction (std::string const &event) { std::cout << "actionFunction (" << event << ")" << std::endl; }
@@ -35,28 +38,6 @@ struct Class {
 
 private:
         std::string value;
-};
-
-/**
- *
- */
-class At {
-public:
-        At (gsl::czstring<> c) : cmd (c) {}
-        void operator() () { std::cout << "usart <- " << cmd << std::endl; }
-
-private:
-        gsl::czstring<> cmd;
-};
-
-/**
- * Event : string with operator ==
- */
-struct Eq {
-        Eq (std::string t) : t (std::move (t)) {}
-
-        template <typename Ev> bool operator() (Ev const &ev) const { return ev == t; }
-        std::string t;
 };
 
 /**
@@ -89,7 +70,7 @@ TEST_CASE ("First test", "[Instantiation]")
 }
 
 /**
- * Machine instantiated for the first time.
+ * Machine instance and a few features tested.
  */
 TEST_CASE ("Machine instance", "[Instantiation]")
 {
