@@ -73,32 +73,36 @@ TEST_CASE ("Machine instance", "[Instantiation]")
 {
         using namespace hana::literals;
 
-        auto m = machine (
-                state ("INIT"_STATE,
-                       entry (
-                               // Action variant 1 : event passed as an argument, but no return value. Runs immediately.
-                               [] (int event) { std::cout << "1st entry [" << event << "]" << std::endl; },
-                               // Action variant 2 : the simplest. Just like above, but no argument.
-                               [] () { std::cout << "2nd entry" << std::endl; },
-                               // Action variant 3 : delays the machine operation.
-                               [] (int event) {
-                                       std::cout << "3rd entry" << std::endl;
-                                       return 500ms;
-                               },
-                               // Action variant 4 : like the above, but no ragument.
-                               [] () {
-                                       std::cout << "4th entry" << std::endl;
-                                       return 500ms;
-                               }),
-                       exit ([] { std::cout << "1st exit" << std::endl; }), transition ("B"_STATE, [] (int i) { return i == 2; })),
+        auto m = machine (state ("INIT"_STATE,
+                                 entry (
+                                         // Action variant 1 : event passed as an argument, but no return value. Runs immediately.
+                                         [] (int event) { std::cout << "1st entry [" << event << "]" << std::endl; },
+                                         // Action variant 2 : the simplest. Just like above, but no argument.
+                                         [] () { std::cout << "2nd entry" << std::endl; },
+                                         // Action variant 3 : delays the machine operation.
+                                         [] (int event) {
+                                                 std::cout << "3rd entry" << std::endl;
+                                                 return 500ms;
+                                         },
+                                         // Action variant 4 : like the above, but no ragument.
+                                         [] () {
+                                                 std::cout << "4th entry" << std::endl;
+                                                 return 500ms;
+                                         }),
+                                 exit ([] { std::cout << "1st exit" << std::endl; }), transition ("B"_STATE, [] (int i) { return i == 2; })),
 
-                state ("B"_STATE, entry (At ("Z")), exit ([] { return 10000us; }, [] { std::cout << "exit in the middle" << std::endl; }),
-                       transition (
-                               "C"_STATE, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
+                          state ("B"_STATE, entry (At ("Z")),
+                                 exit ([] { return 10000us; },
+                                       [] {
+                                               std::cout << "exit in the middle" << std::endl;
+                                               return 500ms;
+                                       }),
+                                 transition (
+                                         "C"_STATE, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
 
-                state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
+                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
 
-                state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")))
+                          state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")))
 
         );
 
@@ -118,7 +122,10 @@ TEST_CASE ("Machine instance", "[Instantiation]")
 
         while (m.isWaiting ()) {
         }
+        m.run (deq); // After the wait run following exit actions (if any) and change state.
 
+        while (m.isWaiting ()) {
+        }
         m.run (deq); // After the wait run following exit actions (if any) and change state.
 
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));

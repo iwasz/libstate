@@ -166,8 +166,9 @@ StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, 
                         // Run curent.exit
                         Delay d = state.exit (event);
 
-                        if (d > 0) {
-                                std::cerr << "Delay requested : " << d << std::endl;
+                        if (d != Delay::zero ()) {
+                                std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
+                                          << std::endl;
                                 return {{}, d};
                         }
 
@@ -246,8 +247,9 @@ template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue
         if (result.newStateName) {
                 currentName = result.newStateName;
         }
-        else if (result.delay > 0) {
-                timer.start (result.delay);
+        else if (result.delay != Delay::zero ()) {
+                // TODO modify timer, and get rid of the cast.
+                timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (result.delay).count ());
         }
 }
 

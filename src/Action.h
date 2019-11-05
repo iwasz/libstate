@@ -24,7 +24,8 @@ namespace ls {
 /// Action return type.
 enum class Done { NO, YES };
 
-using Delay = int;
+/// Common return type for simplicity.
+using Delay = std::chrono::nanoseconds;
 
 template <typename> struct IsDuration : public std::false_type {
 };
@@ -33,42 +34,34 @@ template <typename Rep, typename Period> struct IsDuration<std::chrono::duration
 };
 
 /**
- * It's a wrapper for an action which , depending on its interface will run it (if the
- * action does not return Done), or will add the action to a list for further processing.
+ * It's a wrapper for an action which runs the wrapped type only unless
+ * it is reset.
  */
 template <typename T> class ActionRunner {
 public:
         explicit ActionRunner (T t) : action (std::move (t)) {}
 
         /**
-         * It does not have to use paramater pack. I think actions API will always have
-         * only one parameter, but let leave it for now.
+         *
          */
         template <typename... Arg> Delay operator() (Arg &&... a)
         {
                 if (!active) {
-                        return 0;
+                        return Delay::zero ();
                 }
 
-                // using IsInvocable = std::is_invocable<T, Arg...>;
-                // TODO this following check does not work, because T() is evaluated. And if action has an argument, the this fails. Should use
-                // some smarter one. using DoesReturn = std::is_same<typename std::result_of<T ()>::type, Done>;
-                // TODO better checks, static asserts and meaningful error mesages.
                 active = false;
-
-                // constexpr bool hasEventArgument = std::is_invocable_v<T, Arg...>;
-                // constexpr
-                // static_assert ();
 
                 if constexpr (std::is_invocable_v<T, Arg...>) { // Action accepts arguments
 
                         if constexpr (IsDuration<std::invoke_result_t<T, Arg...>>::value) {
+                                return std::chrono::duration_cast<Delay> (action (std::forward<Arg> (a)...));
                         }
                         else {
                                 static_assert (std::is_same_v<std::invoke_result_t<T, Arg...>, void>,
                                                "Wrong action return value. Use either std::chrono::duration <R, P> or void.");
                                 action (std::forward<Arg> (a)...);
-                                return {};
+                                return Delay::zero ();
                         }
                 }
                 else { // Action does not accept arguments
@@ -78,15 +71,13 @@ public:
                                 "arguments at all.");
 
                         if constexpr (IsDuration<std::invoke_result_t<T>>::value) { // But it returns Done.
-                                // erasedActionList.push_back (Command (action));
-                                // TODO!!! Wait
-                                return Delay{1000};
+                                return std::chrono::duration_cast<Delay> (action ());
                         }
                         else {
                                 static_assert (std::is_same_v<std::invoke_result_t<T>, void>,
                                                "Wrong action return value. Use either std::chrono::duration <R, P> or void.");
                                 action (); // Doesn't either accept an arg or return.
-                                return {};
+                                return Delay::zero ();
                         }
                 }
         }
@@ -104,7 +95,7 @@ private:
 template <typename Ev, typename R, typename... Rr> Delay processActionRunners (Ev const &event, R &runner, Rr &... rest)
 {
 
-        if (Delay d = runner (event); d != 0) {
+        if (Delay d = runner (event); d != Delay::zero ()) {
                 return d;
         }
 
