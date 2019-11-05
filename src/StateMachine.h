@@ -151,6 +151,7 @@ std::optional<std::type_index> processTransitions (Q &&eventQueue, S &state, T &
 
                 // Perform the transition
                 if (transition.condition (event)) {
+                        std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
 
                         // Run curent.exit
                         state.exit (event);
