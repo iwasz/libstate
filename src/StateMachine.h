@@ -9,6 +9,7 @@
 #pragma once
 #include "Action.h"
 #include <boost/hana.hpp>
+#include <boost/hana/fwd/unpack.hpp>
 #include <gsl/gsl>
 #include <optional>
 #include <type_traits>
@@ -141,6 +142,80 @@ template <typename S> auto Machine<S>::findInitialState () const
 
 /****************************************************************************/
 
+template <typename Q, typename S, typename T, typename... Tr>
+std::optional<std::type_index> processTransitions (Q &&eventQueue, S &state, T &transition, Tr &... rest)
+{
+        for (auto event : eventQueue) {
+                static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
+                               "Type mismatch between an event, and a condition(s) which checks this event.");
+
+                // Perform the transition
+                if (transition.condition (event)) {
+
+                        // Run curent.exit
+                        state.exit (event);
+
+                        // TODO Action tuple, action runner.
+                        // Run transition.action
+                        boost::hana::for_each (transition.actions, [&event] (auto &action) {
+                                if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
+                                        action (event);
+                                }
+                                else {
+                                        action ();
+                                }
+                        });
+
+                        // Change current name.
+                        auto ret = std::optional<std::type_index> (typeid (transition.stateName));
+
+                        // - run current.entry
+
+                        eventQueue.clear ();
+                        return ret;
+                }
+        }
+
+        if constexpr (sizeof...(rest)) {
+                return processTransitions (eventQueue, state, rest...);
+        }
+        // else {
+        // }
+
+        return {};
+}
+
+/****************************************************************************/
+
+template <typename S, typename Q, typename... Rs>
+std::optional<std::type_index> processStates (std::type_index const &currentStateTi, Q &&eventQueue, S &state, Rs &... rest)
+{
+        if (std::type_index (typeid (state.name)) == currentStateTi) {
+                std::cout << "Current  : " << state.name.c_str () << std::endl;
+
+                return boost::hana::unpack (state.transitions, [&eventQueue, &state] (auto &... trans) {
+                        if constexpr (sizeof...(trans)) {
+                                return processTransitions (eventQueue, state, trans...);
+                        }
+
+                        return std::optional<std::type_index>{};
+                });
+        }
+
+        if constexpr (sizeof...(rest) > 0) {
+                return processStates (currentStateTi, std::forward<Q> (eventQueue), rest...);
+        }
+        // else {
+        //         if (std::type_index (typeid (state.name)) != currentStateTi) {
+        //                 return {};
+        //         }
+        // }
+
+        return {};
+}
+
+/****************************************************************************/
+
 template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue)
 {
         std::cout << "== Run ==" << std::endl;
@@ -148,51 +223,59 @@ template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue
 
         std::type_index &currentStateNameCopy = *currentName;
 
-        boost::hana::for_each (states, [&currentStateNameCopy, &eventQueue] (auto /*const?*/ &state) {
-                // Find currentState @ runTime
-                if (std::type_index (typeid (state.name)) != currentStateNameCopy) {
-                        return;
+        currentName = boost::hana::unpack (states, [&currentStateNameCopy, &eventQueue] (auto &... arg) {
+                if constexpr (sizeof...(arg)) {
+                        return processStates (currentStateNameCopy, eventQueue, arg...);
                 }
 
-                std::cout << "Current  : " << state.name.c_str () << std::endl;
-
-                // find transition
-                // - Loop through transitions in current state and pass the events into them.
-                boost::hana::for_each (state.transitions, [&currentStateNameCopy, &eventQueue, &state] (auto &transition) {
-                        std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
-
-                        for (auto event : eventQueue) {
-                                static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
-                                               "Type mismatch between an event, and a condition(s) which checks this event.");
-
-                                // Perform the transition
-                                if (transition.condition (event)) {
-
-                                        // Run curent.exit
-                                        state.exit (event);
-
-                                        // TODO Action tuple, action runner.
-                                        // Run transition.action
-                                        boost::hana::for_each (transition.actions, [&event] (auto &action) {
-                                                if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
-                                                        action (event);
-                                                }
-                                                else {
-                                                        action ();
-                                                }
-                                        });
-
-                                        // Change current name.
-                                        currentStateNameCopy = std::type_index (typeid (transition.stateName));
-
-                                        // - run current.entry
-
-                                        eventQueue.clear ();
-                                        return;
-                                }
-                        }
-                });
+                return std::optional<std::type_index>{};
         });
+
+        // boost::hana::for_each (states, [&currentStateNameCopy, &eventQueue] (auto /*const?*/ &state) {
+        //         // Find currentState @ runTime
+        //         if (std::type_index (typeid (state.name)) != currentStateNameCopy) {
+        //                 return;
+        //         }
+
+        //         std::cout << "Current  : " << state.name.c_str () << std::endl;
+
+        //         // find transition
+        //         // - Loop through transitions in current state and pass the events into them.
+        //         boost::hana::for_each (state.transitions, [&currentStateNameCopy, &eventQueue, &state] (auto &transition) {
+        //                 std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
+
+        //                 for (auto event : eventQueue) {
+        //                         static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
+        //                                        "Type mismatch between an event, and a condition(s) which checks this event.");
+
+        //                         // Perform the transition
+        //                         if (transition.condition (event)) {
+
+        //                                 // Run curent.exit
+        //                                 state.exit (event);
+
+        //                                 // TODO Action tuple, action runner.
+        //                                 // Run transition.action
+        //                                 boost::hana::for_each (transition.actions, [&event] (auto &action) {
+        //                                         if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
+        //                                                 action (event);
+        //                                         }
+        //                                         else {
+        //                                                 action ();
+        //                                         }
+        //                                 });
+
+        //                                 // Change current name.
+        //                                 currentStateNameCopy = std::type_index (typeid (transition.stateName));
+
+        //                                 // - run current.entry
+
+        //                                 eventQueue.clear ();
+        //                                 return;
+        //                         }
+        //                 }
+        //         });
+        // });
 }
 
 } // namespace ls

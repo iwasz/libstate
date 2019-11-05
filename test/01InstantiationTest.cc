@@ -87,18 +87,7 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                  transition (
                                          "C"_STATE, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
 
-                          state ("C"_STATE, entry (At ("Z")), exit ([] {
-                                         static int cnt = 0;
-                                         if (++cnt >= 3) {
-                                                 std::cout << "Delay DONE" << std::endl;
-                                                 return Done::YES;
-                                         }
-                                         else {
-                                                 std::cout << "Delay..." << std::endl;
-                                                 return Done::NO;
-                                         }
-                                 }),
-                                 transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
+                          state ("C"_STATE, entry (At ("Z")), exit ([] {}), transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
 
                           state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")))
 
@@ -118,13 +107,6 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         m.run (std::deque{3}); // State changed to "C"_STATE
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
 
-        m.run (std::deque{
-                4, 5}); // Transition condition is satisfied, but exit action has to be run 3 times until it actually finishes. 1 call to exit.
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
-
-        m.run (std::deque<int>{}); // 2nd call to exit.
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
-
-        m.run (std::deque<int>{}); // 3rd call, and state change.
+        m.run (std::deque{4, 5}); // Transition condition is satisfied.
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("FINAL"_STATE)));
 }
