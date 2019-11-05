@@ -36,6 +36,10 @@ public:
          */
         template <typename... Arg> void operator() (Arg &&... a)
         {
+                if (!active) {
+                        return;
+                }
+
                 // using IsInvocable = std::is_invocable<T, Arg...>;
                 // TODO this following check does not work, because T() is evaluated. And if action has an argument, the this fails. Should use
                 // some smarter one. using DoesReturn = std::is_same<typename std::result_of<T ()>::type, Done>;
@@ -54,10 +58,16 @@ public:
                                 action (); // Doesn't either accept an arg or return.
                         }
                 }
+
+                active = false;
         }
+
+        void reset () { active = true; }
+        bool isActive () const { return active; }
 
 private:
         T action;
+        bool active{true};
 };
 
 /**
