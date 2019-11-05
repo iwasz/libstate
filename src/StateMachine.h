@@ -116,6 +116,12 @@ public:
         }
 
         template <typename Q> void run (Q &&queue);
+        template <typename Q> void waitAndRun (Q &&queue)
+        {
+                while (isWaiting ()) {
+                }
+                run (std::forward<Q> (queue));
+        }
 
         auto getCurrentStateName () const { return currentName; }
         bool isWaiting () const { return !timer.isExpired (); }

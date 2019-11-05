@@ -118,15 +118,9 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
 
         std::deque deq{3};
-        m.run (deq); // Transition condition is met, so run exit action which waits for 1000ms
-
-        while (m.isWaiting ()) {
-        }
-        m.run (deq); // After the wait run following exit actions (if any) and change state.
-
-        while (m.isWaiting ()) {
-        }
-        m.run (deq); // After the wait run following exit actions (if any) and change state.
+        m.run (deq);        // Transition condition is met, so run exit action which waits for 1000ms
+        m.waitAndRun (deq); // After the wait run following exit actions (if any) and change state.
+        m.waitAndRun (deq); // After the wait run following exit actions (if any) and change state.
 
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
 
