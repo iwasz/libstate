@@ -21,9 +21,6 @@
 
 namespace ls {
 
-/// Action return type.
-enum class Done { NO, YES };
-
 /// Common return type for simplicity.
 using Delay = std::chrono::nanoseconds;
 
@@ -94,7 +91,6 @@ private:
 
 template <typename Ev, typename R, typename... Rr> Delay processActionRunners (Ev const &event, R &runner, Rr &... rest)
 {
-
         if (Delay d = runner (event); d != Delay::zero ()) {
                 return d;
         }
@@ -125,6 +121,12 @@ public:
 
                         return Delay{};
                 });
+        }
+
+        void reset ()
+        {
+                auto resetAll = [] (auto &... args) { (args.reset (), ...); };
+                boost::hana::unpack (actions, resetAll);
         }
 
 private:

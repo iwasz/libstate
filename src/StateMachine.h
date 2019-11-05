@@ -109,7 +109,6 @@ public:
 
 private:
         auto findInitialState () const;
-        Done runLongActions ();
 
 private:
         S states;                                     /// boost::hana::tuple of States. TODO hana map
@@ -175,7 +174,8 @@ StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, 
 
                         // - run current.entry
 
-                        eventQueue.clear ();
+                        eventQueue.clear (); // TODO not quite like that
+                        state.exit.reset ();
                         return {ret, {}};
                 }
         }
