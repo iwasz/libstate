@@ -57,11 +57,10 @@ TEST_CASE ("First test", "[Instantiation]")
 
         auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
 
-        ErasedActionList l{};
-        state2.entry (l, "hello"s);
-        state2.exit (l, "hello"s);
+        state2.entry ("hello"s);
+        state2.exit ("hello"s);
 
-        state3.entry (l, "hello"s);
+        state3.entry ("hello"s);
 }
 
 /**
