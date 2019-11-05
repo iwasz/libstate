@@ -8,10 +8,13 @@
 
 #pragma once
 #include "Action.h"
+#include "Misc.h"
 #include <boost/hana.hpp>
 #include <boost/hana/fwd/unpack.hpp>
+#include <chrono>
 #include <gsl/gsl>
 #include <optional>
+#include <pthread.h>
 #include <type_traits>
 #include <typeindex>
 
@@ -115,6 +118,7 @@ public:
         template <typename Q> void run (Q &&queue);
 
         auto getCurrentStateName () const { return currentName; }
+        bool isWaiting () const { return !timer.isExpired (); }
 
 private:
         auto findInitialState () const;
@@ -123,6 +127,7 @@ private:
 private:
         S states;                                     /// boost::hana::tuple of States. TODO hana map
         std::optional<std::type_index> currentName{}; /// Current state name. // TODO use type_index
+        Timer timer{};
 };
 
 /*--------------------------------------------------------------------------*/
@@ -142,8 +147,13 @@ template <typename S> auto Machine<S>::findInitialState () const
 
 /****************************************************************************/
 
+struct StateProcessResult {
+        std::optional<std::type_index> newStateName{};
+        Delay delay{};
+};
+
 template <typename Q, typename S, typename T, typename... Tr>
-std::optional<std::type_index> processTransitions (Q &&eventQueue, S &state, T &transition, Tr &... rest)
+StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, Tr &... rest)
 {
         for (auto event : eventQueue) {
                 static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
@@ -158,6 +168,7 @@ std::optional<std::type_index> processTransitions (Q &&eventQueue, S &state, T &
 
                         if (d > 0) {
                                 std::cerr << "Delay requested : " << d << std::endl;
+                                return {{}, d};
                         }
 
                         // TODO Action tuple, action runner.
@@ -177,7 +188,7 @@ std::optional<std::type_index> processTransitions (Q &&eventQueue, S &state, T &
                         // - run current.entry
 
                         eventQueue.clear ();
-                        return ret;
+                        return {ret, {}};
                 }
         }
 
@@ -191,17 +202,17 @@ std::optional<std::type_index> processTransitions (Q &&eventQueue, S &state, T &
 /****************************************************************************/
 
 template <typename S, typename Q, typename... Rs>
-std::optional<std::type_index> processStates (std::type_index const &currentStateTi, Q &&eventQueue, S &state, Rs &... rest)
+StateProcessResult processStates (std::type_index const &currentStateTi, Q &&eventQueue, S &state, Rs &... rest)
 {
         if (std::type_index (typeid (state.name)) == currentStateTi) {
                 std::cout << "Current  : " << state.name.c_str () << std::endl;
 
-                return boost::hana::unpack (state.transitions, [&eventQueue, &state] (auto &... trans) {
+                return boost::hana::unpack (state.transitions, [&eventQueue, &state] (auto &... trans) -> StateProcessResult {
                         if constexpr (sizeof...(trans)) {
                                 return processTransitions (eventQueue, state, trans...);
                         }
 
-                        return std::optional<std::type_index>{};
+                        return {};
                 });
         }
 
@@ -216,18 +227,28 @@ std::optional<std::type_index> processStates (std::type_index const &currentStat
 
 template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue)
 {
+        if (!timer.isExpired ()) {
+                return;
+        }
+
         std::cout << "== Run ==" << std::endl;
         Expects (currentName);
-
         std::type_index &currentStateNameCopy = *currentName;
 
-        currentName = boost::hana::unpack (states, [&currentStateNameCopy, &eventQueue] (auto &... arg) {
+        StateProcessResult result = boost::hana::unpack (states, [&currentStateNameCopy, &eventQueue] (auto &... arg) -> StateProcessResult {
                 if constexpr (sizeof...(arg)) {
                         return processStates (currentStateNameCopy, eventQueue, arg...);
                 }
 
-                return std::optional<std::type_index>{};
+                return {};
         });
+
+        if (result.newStateName) {
+                currentName = result.newStateName;
+        }
+        else if (result.delay > 0) {
+                timer.start (result.delay);
+        }
 }
 
 } // namespace ls

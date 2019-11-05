@@ -70,26 +70,27 @@ TEST_CASE ("Machine instance", "[Instantiation]")
 {
         using namespace hana::literals;
 
-        auto m = machine (state ("INIT"_STATE,
-                                 entry (
-                                         // Action variant 1 : event passed as an argument, but no return value (Done::YES is assumed).
-                                         [] (int event) { std::cout << "1st entry [" << event << "]" << std::endl; },
-                                         // Action variant 2 : no input argument and return value.
-                                         [] () {
-                                                 std::cout << "1st entry" << std::endl;
-                                                 return Done::YES;
-                                         },
-                                         // Action variant 3 (the simplest).
-                                         [] () { std::cout << "1st entry" << std::endl; }),
-                                 exit ([] { std::cout << "1st exit" << std::endl; }), transition ("B"_STATE, [] (int i) { return i == 2; })),
+        auto m = machine (
+                state ("INIT"_STATE,
+                       entry (
+                               // Action variant 1 : event passed as an argument, but no return value (Done::YES is assumed).
+                               [] (int event) { std::cout << "1st entry [" << event << "]" << std::endl; },
+                               // Action variant 2 : no input argument and return value.
+                               [] () {
+                                       std::cout << "1st entry" << std::endl;
+                                       return Done::YES;
+                               },
+                               // Action variant 3 (the simplest).
+                               [] () { std::cout << "1st entry" << std::endl; }),
+                       exit ([] { std::cout << "1st exit" << std::endl; }), transition ("B"_STATE, [] (int i) { return i == 2; })),
 
-                          state ("B"_STATE, entry (At ("Z")), exit ([] { return Done::NO; }),
-                                 transition (
-                                         "C"_STATE, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
+                state ("B"_STATE, entry (At ("Z")), exit ([] { return Done::NO; }, [] { std::cout << "exit in the middle" << std::endl; }),
+                       transition (
+                               "C"_STATE, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
 
-                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
+                state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
 
-                          state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")))
+                state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")))
 
         );
 
@@ -104,7 +105,14 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         REQUIRE (m.getCurrentStateName ());
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
 
-        m.run (std::deque{3}); // State changed to "C"_STATE
+        std::deque deq{3};
+        m.run (deq); // Transition condition is met, so run exit action which waits for 1000ms
+
+        while (m.isWaiting ()) {
+        }
+
+        m.run (deq); // After the wait run following exit actions (if any) and change state.
+
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
 
         m.run (std::deque{4, 5}); // Transition condition is satisfied.

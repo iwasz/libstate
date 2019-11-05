@@ -47,9 +47,9 @@ public:
                 // TODO this following check does not work, because T() is evaluated. And if action has an argument, the this fails. Should use
                 // some smarter one. using DoesReturn = std::is_same<typename std::result_of<T ()>::type, Done>;
                 // TODO better checks, static asserts and meaningful error mesages.
+                active = false;
 
                 if constexpr (std::is_invocable_v<T, Arg...>) { // Action accepts arguments
-                        active = false;
                         action (std::forward<Arg> (a)...);
                         static_assert (std::is_same_v<std::invoke_result_t<T, Arg...>, void>, "Wrong action interface.");
                         return {};
