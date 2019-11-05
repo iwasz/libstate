@@ -38,6 +38,28 @@ private:
 };
 
 /**
+ *
+ */
+class At {
+public:
+        At (gsl::czstring<> c) : cmd (c) {}
+        void operator() () { std::cout << "usart <- " << cmd << std::endl; }
+
+private:
+        gsl::czstring<> cmd;
+};
+
+/**
+ * Event : string with operator ==
+ */
+struct Eq {
+        Eq (std::string t) : t (std::move (t)) {}
+
+        template <typename Ev> bool operator() (Ev const &ev) const { return ev == t; }
+        std::string t;
+};
+
+/**
  * This test only instantiates some bits of state machine and checks if it is even possible.
  * Does not do any REQUIRE checks.
  */
@@ -100,7 +122,8 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                  transition (
                                          "C"_STATE, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
 
-                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
+                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("B"_STATE, [] (int ev) { return ev == 5; }),
+                                 transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
 
                           state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")))
 
@@ -112,7 +135,6 @@ TEST_CASE ("Machine instance", "[Instantiation]")
          * fires upon event '2', the state is changed.
          */
         m.run (std::deque{1, 2});
-
         // State is successfully changed to "B"_STATE.
         REQUIRE (m.getCurrentStateName ());
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
@@ -121,30 +143,16 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         m.run (deq);        // Transition condition is met, so run exit action which waits for 1000ms
         m.waitAndRun (deq); // After the wait run following exit actions (if any) and change state.
         m.waitAndRun (deq); // After the wait run following exit actions (if any) and change state.
-
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
 
-        m.run (std::deque{4, 5}); // Transition condition is satisfied.
+        m.run (std::deque{5});
+        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
+
+        m.run (std::deque{3});
+        m.waitAndRun (std::deque{3});
+        m.waitAndRun (std::deque{3});
+        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
+
+        m.run (std::deque{4, 7}); // Transition condition is satisfied.
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("FINAL"_STATE)));
-}
-
-template <typename T, typename = std::void_t<>> struct IsDelay : public std::false_type {
-};
-
-// template <typename T, std::void_t<decltype (std::is_same_v<std::invoke_result_t<T>, Delay>)>> struct IsDelay : public std::false_type {
-// };
-template <typename T> struct IsDelay<T, std::void_t<decltype (std::declval<T &> () ())>> : public std::true_type {
-};
-
-TEST_CASE ("Traits", "[Instantiation]")
-{
-        auto ac = [] () {};
-        static_assert (IsDelay<decltype (ac)>::value);
-
-        auto a = int ();
-        static_assert (!IsDuration<decltype (a)>::value);
-
-        auto ts = std::chrono::steady_clock::now ();
-        auto d = ts.time_since_epoch ();
-        static_assert (IsDuration<decltype (d)>::value);
 }

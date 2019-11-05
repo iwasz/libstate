@@ -76,25 +76,6 @@ template <typename Sn, typename Entry, typename Exit, typename... Trans> auto st
                       boost::hana::tuple (std::forward<decltype (trans)> (trans)...));
 }
 
-// TODO not here
-class At {
-public:
-        At (gsl::czstring<> c) : cmd (c) {}
-        void operator() () { std::cout << "usart <- " << cmd << std::endl; }
-
-private:
-        gsl::czstring<> cmd;
-};
-
-/// Event : string with operator ==
-// TODO move from here
-struct Eq {
-        Eq (std::string t) : t (std::move (t)) {}
-
-        template <typename Ev> bool operator() (Ev const &ev) const { return ev == t; }
-        std::string t;
-};
-
 /**
  *
  */
