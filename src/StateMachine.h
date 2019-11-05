@@ -196,18 +196,13 @@ StateProcessResult processStates (std::type_index const &currentStateTi, Q &&eve
         if (std::type_index (typeid (state.name)) == currentStateTi) {
                 std::cout << "Current  : " << state.name.c_str () << std::endl;
 
-                if constexpr (boost::hana::length (state.transitions) != boost::hana::size_c<0>) { // TODO maybe remove this if constexpr
-                        return boost::hana::unpack (state.transitions, [&eventQueue, &state] (auto &... trans) -> StateProcessResult {
-                                if constexpr (sizeof...(trans)) {
-                                        return processTransitions (eventQueue, state, trans...);
-                                }
+                return boost::hana::unpack (state.transitions, [&eventQueue, &state] (auto &... trans) -> StateProcessResult {
+                        if constexpr (sizeof...(trans)) {
+                                return processTransitions (eventQueue, state, trans...);
+                        }
 
-                                return {};
-                        });
-                }
-                else {
                         return {};
-                }
+                });
         }
 
         if constexpr (sizeof...(rest) > 0) {
