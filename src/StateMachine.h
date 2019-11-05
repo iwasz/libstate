@@ -154,7 +154,11 @@ std::optional<std::type_index> processTransitions (Q &&eventQueue, S &state, T &
                         std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
 
                         // Run curent.exit
-                        state.exit (event);
+                        Delay d = state.exit (event);
+
+                        if (d > 0) {
+                                std::cerr << "Delay requested : " << d << std::endl;
+                        }
 
                         // TODO Action tuple, action runner.
                         // Run transition.action

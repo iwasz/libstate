@@ -83,11 +83,11 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                          [] () { std::cout << "1st entry" << std::endl; }),
                                  exit ([] { std::cout << "1st exit" << std::endl; }), transition ("B"_STATE, [] (int i) { return i == 2; })),
 
-                          state ("B"_STATE, entry (At ("Z")), exit (At ("DT")),
+                          state ("B"_STATE, entry (At ("Z")), exit ([] { return Done::NO; }),
                                  transition (
                                          "C"_STATE, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
 
-                          state ("C"_STATE, entry (At ("Z")), exit ([] {}), transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
+                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_STATE, [] (int ev) { return ev == 4; })),
 
                           state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")))
 
