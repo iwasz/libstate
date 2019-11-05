@@ -151,6 +151,10 @@ template <typename T> struct Exit : public ActionTuple<T> {
         using ActionTuple<T>::ActionTuple;
 };
 
+template <typename T> struct TransitionAction : public ActionTuple<T> {
+        using ActionTuple<T>::ActionTuple;
+};
+
 template <template <typename T> class Tu, typename... Ar> auto actionTuple (Ar &&... args)
 {
         auto tuple = boost::hana::make_tuple (ActionRunner (std::forward<Ar> (args))...);
@@ -160,5 +164,6 @@ template <template <typename T> class Tu, typename... Ar> auto actionTuple (Ar &
 
 template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry, Ar...> (std::forward<Ar> (args)...); }
 template <typename... Ar> auto exit (Ar &&... args) { return actionTuple<Exit, Ar...> (std::forward<Ar> (args)...); }
+template <typename... Ar> auto transitionAction (Ar &&... args) { return actionTuple<TransitionAction, Ar...> (std::forward<Ar> (args)...); }
 
 } // namespace ls

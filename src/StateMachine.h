@@ -47,7 +47,7 @@ public:
 template <typename Sn, typename Cond, typename... Acts> auto transition (Sn &&sn, Cond &&cond, Acts &&... acts)
 {
         return Transition (std::forward<decltype (sn)> (sn), std::forward<decltype (cond)> (cond),
-                           boost::hana::tuple (std::forward<decltype (acts)> (acts)...));
+                           transitionAction (std::forward<decltype (acts)> (acts)...));
 };
 
 // template <typename... Ts> auto transitions (Ts &&... ts) { return hana::make_tuple (std::forward<Ts> (ts)...); }
@@ -158,16 +158,7 @@ StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, 
                                 return {{}, d};
                         }
 
-                        // TODO Action tuple, action runner.
-                        // Run transition.action
-                        boost::hana::for_each (transition.actions, [&event] (auto &action) {
-                                if constexpr (std::is_invocable_v<decltype (action), decltype (event)>) {
-                                        action (event);
-                                }
-                                else {
-                                        action ();
-                                }
-                        });
+                        transition.actions (event);
 
                         // Change current name.
                         auto ret = std::optional<std::type_index> (typeid (transition.stateName));
@@ -176,6 +167,7 @@ StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, 
 
                         eventQueue.clear (); // TODO not quite like that
                         state.exit.reset ();
+                        transition.actions.reset ();
                         return {ret, {}};
                 }
         }
