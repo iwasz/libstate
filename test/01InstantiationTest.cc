@@ -118,6 +118,9 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         m.run (std::deque{1, 2});
         // State is successfully changed to "B"_STATE.
         REQUIRE (m.getCurrentStateName ());
+        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("INIT"_STATE)));
+
+        m.run (std::deque{1, 2});
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
 
         std::deque deq{3};
