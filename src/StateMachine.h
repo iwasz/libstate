@@ -147,7 +147,13 @@ private:
 /*--------------------------------------------------------------------------*/
 
 /// Helper for creating a machine.
-template <typename... Sts> auto machine (Sts &&... states) { return Machine (boost::hana::make_tuple (std::forward<Sts> (states)...)); }
+template <typename... Sts> auto machine (Sts &&... states)
+{
+        // TODO this first artificial state -> unique name, no actions.
+        return Machine (
+                boost::hana::make_tuple (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (int) { return true; })),
+                                         std::forward<Sts> (states)...));
+}
 
 /****************************************************************************/
 
@@ -156,7 +162,9 @@ template <typename S> auto Machine<S>::findInitialState () const
         auto initialState
                 = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'I', 'N', 'I', 'T'>; });
         static_assert (initialState != boost::hana::nothing, "Initial state has to be named \"INIT\"_STATE and it must be defined.");
-        return initialState;
+
+        auto boostrapState = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'_'>; });
+        return boostrapState;
 }
 
 /****************************************************************************/
@@ -192,15 +200,29 @@ template <typename S> template <typename Ev> Delay Machine<S>::runResetEntryActi
 
 /****************************************************************************/
 
+template <typename Ev, typename Cn> bool checkCondition (Ev const &ev, Cn &cn)
+{
+        if constexpr (std::is_invocable_v<Cn, Ev>) {
+                return cn (ev);
+        }
+        else {
+                static_assert (std::is_invocable_v<Cn>,
+                               "Incompatibility between an event, and a condition(s) which checks this event. Conditions may have a single "
+                               "event argument or no arguments at all.");
+
+                return cn ();
+        }
+}
+
 template <typename S>
 template <typename Q, typename St, typename T, typename... Tr>
 StateProcessResult Machine<S>::processTransitions (Q &&eventQueue, St &state, T &transition, Tr &... rest)
 {
-        for (auto event : eventQueue) {
-                static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
-                               "Type mismatch between an event, and a condition(s) which checks this event.");
+        for (auto const &event : eventQueue) {
 
                 // Perform the transition
+                // TODO accept conditions without an argument
+                // if (checkCondition (transition.condition, event)) {
                 if (transition.condition (event)) {
                         std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
 

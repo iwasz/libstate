@@ -49,12 +49,15 @@ TEST_CASE ("Check if all called", "[Action]")
 
         );
 
-        m.run (std::deque{2});
+        // TODO this should be called with ampty queue, but it does not work, because checks are inside loop iterating over events.
+        m.run (std::deque<int>{2});
+        REQUIRE (m.getCurrentStateName ());
+        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("INIT"_STATE)));
+        REQUIRE (results.at (0) == "INIT entry");
 
-        // State is successfully changed to "B"_STATE.
+        m.run (std::deque{2}); // State is successfully changed to "B"_STATE.
         REQUIRE (m.getCurrentStateName ());
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
-        REQUIRE (results.at (0) == "INIT entry");
         REQUIRE (results.at (1) == "INIT exit");
         REQUIRE (results.at (2) == "INIT->B action");
         REQUIRE (results.at (3) == "B entry");
