@@ -9,6 +9,9 @@
 1. Retained input.
 
 # TODO
+* Compilation problem when last action has a transition.
+* All sorts of combinations should be possible when creating a state. With/without either of : entry, exit, transition. Transition 
+should be with or without either of : condition, action (s).
 * Make state with no actions possible .
 * EventQueue by lvl reference (non const).
 * Consider adding input actions, I might be wrong, but I think I used one of those in MC60 (forgetting abit the name "input action").
@@ -154,3 +157,6 @@ Copy (in Polish) of TODOs from the previous version of the lib.
 * GSL
 * etl
 * Catch2
+
+# Benchmarks
+

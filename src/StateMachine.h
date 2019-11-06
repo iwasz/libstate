@@ -113,7 +113,9 @@ public:
                 // auto initialState = boost::hana::second (initialStatePair);
                 // initialState.runEntryActions (); // There is no event that caused this action to be fired. We are just starting.
 
+#ifndef NDEBUG
                 std::cout << "Initial : " << initialState->name.c_str () << std::endl;
+#endif
         }
 
         template <typename Q> void run (Q &&queue);
@@ -151,7 +153,7 @@ template <typename... Sts> auto machine (Sts &&... states)
 {
         // TODO this first artificial state -> unique name, no actions.
         return Machine (
-                boost::hana::make_tuple (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (int) { return true; })),
+                boost::hana::make_tuple (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (auto) { return true; })),
                                          std::forward<Sts> (states)...));
 }
 
@@ -224,8 +226,9 @@ StateProcessResult Machine<S>::processTransitions (Q &&eventQueue, St &state, T 
                 // TODO accept conditions without an argument
                 // if (checkCondition (transition.condition, event)) {
                 if (transition.condition (event)) {
+#ifndef NDEBUG
                         std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
-
+#endif
                         // Run curent.exit
                         if (Delay d = state.exit (event); d != Delay::zero ()) {
                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
@@ -267,8 +270,9 @@ template <typename St, typename Q, typename... Rs>
 StateProcessResult Machine<S>::processStates (std::type_index const &currentStateTi, Q &&eventQueue, St &state, Rs &... rest)
 {
         if (std::type_index (typeid (state.name)) == currentStateTi) {
+#ifndef NDEBUG
                 std::cout << "Current  : " << state.name.c_str () << std::endl;
-
+#endif
                 return boost::hana::unpack (state.transitions, [this, &eventQueue, &state] (auto &... trans) -> StateProcessResult {
                         if constexpr (sizeof...(trans)) {
                                 return processTransitions (eventQueue, state, trans...);
@@ -293,7 +297,9 @@ template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue
                 return;
         }
 
+#ifndef NDEBUG
         std::cout << "== Run ==" << std::endl;
+#endif
         Expects (currentName);
         std::type_index &currentStateNameCopy = *currentName;
 
