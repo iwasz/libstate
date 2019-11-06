@@ -33,7 +33,7 @@ TEST_CASE ("Check if all called", "[Action]")
 
         std::vector<std::string> results;
 
-        auto res = [&results] (std::string const &message) { return [&results, &message] { results.push_back (message); }; };
+        auto res = [&results] (std::string const &message) { return [&results, message] { results.push_back (message); }; };
         auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
 
         auto m = machine (state ("INIT"_STATE, entry (res ("INIT entry")), exit (res ("INIT exit")),
@@ -55,7 +55,7 @@ TEST_CASE ("Check if all called", "[Action]")
         REQUIRE (m.getCurrentStateName ());
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
         REQUIRE (results.at (0) == "INIT entry");
-        REQUIRE (results.at (1) == "B->C action1");
+        REQUIRE (results.at (1) == "INIT exit");
         REQUIRE (results.at (2) == "INIT->B action");
         REQUIRE (results.at (3) == "B entry");
         REQUIRE (results.size () == 4);
@@ -71,7 +71,7 @@ TEST_CASE ("Check if all called", "[Action]")
         m.run (std::deque{5});
         REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
         REQUIRE (results.at (8) == "C exit");
-        REQUIRE (results.at (9) == "C->B action1");
+        REQUIRE (results.at (9) == "C->B action");
         REQUIRE (results.at (10) == "B entry");
         REQUIRE (results.size () == 11);
 

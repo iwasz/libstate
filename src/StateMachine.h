@@ -9,6 +9,7 @@
 #pragma once
 #include "Action.h"
 #include "Misc.h"
+#include "gsl/gsl_assert"
 #include <boost/hana.hpp>
 #include <boost/hana/fwd/integral_constant.hpp>
 #include <boost/hana/fwd/length.hpp>
@@ -83,6 +84,12 @@ template <typename Sn, typename Entry> auto state (Sn &&sn, Entry &&entry)
         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry));
 }
 
+// TODO if processX were moved into the class, move this as well
+struct StateProcessResult {
+        std::optional<std::type_index> newStateName{};
+        Delay delay{};
+};
+
 /**
  *
  */
@@ -92,6 +99,12 @@ public:
         {
                 // Look for initial state if current is empty (std::optional is used).
                 auto initialState = findInitialState ();
+
+                if (Delay d = initialState->entry (1); d != Delay::zero ()) {
+                        std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
+                                  << std::endl;
+                        timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
+                }
 
                 // currentName = typeid (boost::hana::first (initialStatePair));
                 // auto initialState = boost::hana::second (initialStatePair);
@@ -117,6 +130,14 @@ public:
 private:
         auto findInitialState () const;
 
+        template <typename St, typename Q, typename... Rs>
+        StateProcessResult processStates (std::type_index const &currentStateTi, Q &&eventQueue, St &state, Rs &... rest);
+
+        template <typename Q, typename St, typename T, typename... Tr>
+        StateProcessResult processTransitions (Q &&eventQueue, St &state, T &transition, Tr &... rest);
+
+        template <typename Ev> Delay runResetEntryActions (std::type_index const &stateTi, Ev const &ev);
+
 private:
         S states;                                     /// boost::hana::tuple of States. TODO hana map
         std::optional<std::type_index> currentName{}; /// Current state name. // TODO use type_index
@@ -140,13 +161,40 @@ template <typename S> auto Machine<S>::findInitialState () const
 
 /****************************************************************************/
 
-struct StateProcessResult {
-        std::optional<std::type_index> newStateName{};
-        Delay delay{};
-};
+template <typename Ev, typename St, typename... Rs>
+Delay processRunResetEntryActions (std::type_index const &stateTi, Ev const &ev, St &state, Rs &... rest)
+{
+        if (std::type_index (typeid (state.name)) == stateTi) {
+                if (Delay d = state.entry (ev); d != Delay::zero ()) {
+                        std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
+                                  << std::endl;
+                        return d;
+                }
 
-template <typename Q, typename S, typename T, typename... Tr>
-StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, Tr &... rest)
+                // All done, reset.
+                state.entry.reset ();
+                return Delay::zero ();
+        }
+
+        if constexpr (sizeof...(rest) > 0) {
+                return processRunResetEntryActions (stateTi, ev, rest...);
+        }
+
+        return Delay::zero ();
+}
+
+/****************************************************************************/
+
+template <typename S> template <typename Ev> Delay Machine<S>::runResetEntryActions (std::type_index const &stateTi, Ev const &ev)
+{
+        return boost::hana::unpack (states, [&stateTi, &ev] (auto &... states) { return processRunResetEntryActions (stateTi, ev, states...); });
+}
+
+/****************************************************************************/
+
+template <typename S>
+template <typename Q, typename St, typename T, typename... Tr>
+StateProcessResult Machine<S>::processTransitions (Q &&eventQueue, St &state, T &transition, Tr &... rest)
 {
         for (auto event : eventQueue) {
                 static_assert (std::is_invocable<decltype (transition.condition), decltype (event)>::value,
@@ -171,8 +219,10 @@ StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, 
 
                         // Change current name.
                         auto ret = std::optional<std::type_index> (typeid (transition.stateName));
+                        Expects (ret);
 
                         // - run current.entry
+                        runResetEntryActions (*ret, event);
 
                         eventQueue.clear (); // TODO not quite like that
                         state.exit.reset ();
@@ -190,13 +240,14 @@ StateProcessResult processTransitions (Q &&eventQueue, S &state, T &transition, 
 
 /****************************************************************************/
 
-template <typename S, typename Q, typename... Rs>
-StateProcessResult processStates (std::type_index const &currentStateTi, Q &&eventQueue, S &state, Rs &... rest)
+template <typename S>
+template <typename St, typename Q, typename... Rs>
+StateProcessResult Machine<S>::processStates (std::type_index const &currentStateTi, Q &&eventQueue, St &state, Rs &... rest)
 {
         if (std::type_index (typeid (state.name)) == currentStateTi) {
                 std::cout << "Current  : " << state.name.c_str () << std::endl;
 
-                return boost::hana::unpack (state.transitions, [&eventQueue, &state] (auto &... trans) -> StateProcessResult {
+                return boost::hana::unpack (state.transitions, [this, &eventQueue, &state] (auto &... trans) -> StateProcessResult {
                         if constexpr (sizeof...(trans)) {
                                 return processTransitions (eventQueue, state, trans...);
                         }
@@ -224,13 +275,14 @@ template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue
         Expects (currentName);
         std::type_index &currentStateNameCopy = *currentName;
 
-        StateProcessResult result = boost::hana::unpack (states, [&currentStateNameCopy, &eventQueue] (auto &... arg) -> StateProcessResult {
-                if constexpr (sizeof...(arg)) {
-                        return processStates (currentStateNameCopy, eventQueue, arg...);
-                }
+        StateProcessResult result
+                = boost::hana::unpack (states, [this, &currentStateNameCopy, &eventQueue] (auto &... arg) -> StateProcessResult {
+                          if constexpr (sizeof...(arg)) {
+                                  return processStates (currentStateNameCopy, eventQueue, arg...);
+                          }
 
-                return {};
-        });
+                          return {};
+                  });
 
         if (result.newStateName) {
                 currentName = result.newStateName;
