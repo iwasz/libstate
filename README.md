@@ -159,4 +159,12 @@ Copy (in Polish) of TODOs from the previous version of the lib.
 * Catch2
 
 # Benchmarks
+Time as Linux *time* command shows in *real* row. Binary size is in parentheses next to the run-time.
+
+* libstatemachine **f3c19e87249232ecd65482eac8218fe744f37c15**
+* libstate **df8621dd42cb67af13dcf43ce051c95cbdfbef00**
+
+| libstatemachine Debug | Release       | libstate Debug | Release      |
+| --------------------- | ------------- | -------------- | ------------ |
+| 0,228s (482K)         | 0,111s (223K) | 0,560s (8,9M)  | 0,085s (77K) |
 
