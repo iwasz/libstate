@@ -81,38 +81,69 @@ int main ()
 
         );
 
-        m.run (std::deque{"2"}); // _->INIT
+        m.run (std::deque{""}); // _->INIT
+        std::deque<std::string> evq;
 
         for (int i = 0; i < 10000; ++i) {
-                m.run (std::deque{"2"}); // INIT->B
-                m.run (std::deque{"3"}); // B->C
-                m.run (std::deque{"4"});
-                m.run (std::deque{"5"});
-                m.run (std::deque{"6"});
-                m.run (std::deque{"7"});
-                m.run (std::deque{"8"});
-                m.run (std::deque{"9"});
-                m.run (std::deque{"10"});
-                m.run (std::deque{"11"});
-                m.run (std::deque{"12"});
-                m.run (std::deque{"13"});
-                m.run (std::deque{"14"});
-                m.run (std::deque{"15"});
+                evq.push_back ("2");
+                m.run (evq); // INIT->B
+                evq.push_back ("3");
+                m.run (evq); // B->C
+                evq.push_back ("4");
+                m.run (evq);
+                evq.push_back ("5");
+                m.run (evq);
+                evq.push_back ("6");
+                m.run (evq);
+                evq.push_back ("7");
+                m.run (evq);
+                evq.push_back ("8");
+                m.run (evq);
+                evq.push_back ("9");
+                m.run (evq);
+                evq.push_back ("10");
+                m.run (evq);
+                evq.push_back ("11");
+                m.run (evq);
+                evq.push_back ("12");
+                m.run (evq);
+                evq.push_back ("13");
+                m.run (evq);
+                evq.push_back ("14");
+                m.run (evq);
+                evq.push_back ("15");
+                m.run (evq);
 
-                m.run (std::deque{"-16"});
-                m.run (std::deque{"-15"});
-                m.run (std::deque{"-14"});
-                m.run (std::deque{"-13"});
-                m.run (std::deque{"-12"});
-                m.run (std::deque{"-11"});
-                m.run (std::deque{"-10"});
-                m.run (std::deque{"-9"});
-                m.run (std::deque{"-8"});
-                m.run (std::deque{"-7"});
-                m.run (std::deque{"-6"});
-                m.run (std::deque{"-5"});
-                m.run (std::deque{"-4"}); // C->B
-                m.run (std::deque{"-3"}); // B->INIT
+                evq.push_back ("-16");
+                m.run (evq);
+                evq.push_back ("-15");
+                m.run (evq);
+                evq.push_back ("-14");
+                m.run (evq);
+                evq.push_back ("-13");
+                m.run (evq);
+                evq.push_back ("-12");
+                m.run (evq);
+                evq.push_back ("-11");
+                m.run (evq);
+                evq.push_back ("-10");
+                m.run (evq);
+                evq.push_back ("-9");
+                m.run (evq);
+                evq.push_back ("-8");
+                m.run (evq);
+                evq.push_back ("-7");
+                m.run (evq);
+                evq.push_back ("-6");
+                m.run (evq);
+                evq.push_back ("-5");
+                m.run (evq);
+                evq.push_back ("-4");
+                m.run (evq);
+                evq.push_back ("-3");
+                m.run (evq); // B->INIT
+
+                assert (evq.empty ());
         }
 
         assert (results.size () == 1110001);
