@@ -85,10 +85,9 @@ private:
 template <typename Ev, typename... Sts> auto machine (Sts &&... states)
 {
         auto s = boost::hana::make_tuple (
-                erasedState<Ev> (
-                        "_"_STATE, entry ([] {}), exit ([] {}),
-                        /* erasedTransition ( */ boost::hana::make_tuple (transition ("INIT"_STATE, [] (auto /*ev*/) { return true; }))) /* ) */,
-                erasedState<Ev> (states.name, states.entry, states.exit, /* erasedTransitions ( */ states.transitions /* ) */)...);
+                erasedState<Ev> ("_"_STATE, entry ([] {}), exit ([] {}),
+                                 erasedTransitions<Ev> (boost::hana::make_tuple (transition ("INIT"_STATE, [] (auto /*ev*/) { return true; })))),
+                erasedState<Ev> (states.name, states.entry, states.exit, erasedTransitions<Ev> (states.transitions))...);
 
         return Machine<Ev, decltype (s)> (std::move (s));
 }
@@ -147,9 +146,9 @@ StateProcessResult Machine<Ev, S>::processTransitions (Q &&eventQueue, St &state
                 // Perform the transition
                 // TODO accept conditions without an argument
                 // if (checkCondition (transition.condition, event)) {
-                if (transition.condition (event)) {
+                if (transition.checkCondition (event)) {
 #ifndef NDEBUG
-                        std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
+                        std::cout << "Transition to : " << transition.getStateName () << std::endl;
 #endif
                         // Run curent.exit
                         // if (Delay d = currentState->runExitActions (event); d != Delay::zero ()) {
@@ -165,22 +164,21 @@ StateProcessResult Machine<Ev, S>::processTransitions (Q &&eventQueue, St &state
                                 return {{}, d};
                         }
 
-                        if (Delay d = transition.actions (event); d != Delay::zero ()) {
+                        if (Delay d = transition.runActions (event); d != Delay::zero ()) {
                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
                                           << std::endl;
                                 return {{}, d};
                         }
 
                         // Change current name.
-                        auto ret = std::optional<std::type_index> (typeid (transition.stateName));
-                        Expects (ret);
+                        auto ret = transition.getStateIndex ();
 
                         // - run current.entry
-                        runResetEntryActions (*ret, event);
+                        runResetEntryActions (ret, event);
 
                         eventQueue.clear (); // TODO not quite like that
                         state.exit.reset ();
-                        transition.actions.reset ();
+                        transition.resetActions ();
                         return {ret, {}};
                 }
         }

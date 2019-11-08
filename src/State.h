@@ -40,13 +40,13 @@ template <typename Ev> struct ErasedStateBase {
 };
 
 /**
- * TODO change T3 to Tw to denote difference. T3 is tuple of Transitions, and Tw would be tuple of Erased Transitions
+ *
  */
-template <typename Ev, typename Sn, typename T1 = void, typename T2 = void, typename T3 = boost::hana::tuple<>>
+template <typename Ev, typename Sn, typename T1 = void, typename T2 = void, typename Tw = boost::hana::tuple<>>
 class ErasedState : public ErasedStateBase<Ev> {
 public:
         // explicit ErasedState (State<Sn, T1, T2, T3> &s) : name (std::move (s.name)), entry (std::move (s.entry)), exit (std::move (s.exit)) {}
-        ErasedState (Sn sn, Entry<T1> en, Exit<T2> ex, T3 ts)
+        ErasedState (Sn sn, Entry<T1> en, Exit<T2> ex, Tw ts)
             : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
         {
         }
@@ -68,7 +68,7 @@ public:
         Sn name; // name, entry and exit has the same tyypes and values as in State object
         Entry<T1> entry;
         Exit<T2> exit;
-        T3 transitions; // transitions at the other hand are wrapped in ErasedTransition <Ev>
+        Tw transitions; // transitions at the other hand are wrapped in ErasedTransition <Ev>
 };
 
 /**
@@ -120,13 +120,13 @@ ErasedState<Ev, Sn, T1, T2, T3> erasedState (Sn sn, Entry<T1> en, Exit<T2> ex, T
  * A state - typesafe version. This is only a "type container" which is used to make
  * more specialized "event aware" types. This one is independent of Event type used.
  */
-template <typename Sn, typename T1 = void, typename T2 = void, typename T3 = boost::hana::tuple<>> class State {
+template <typename Sn, typename En = void, typename Ex = void, typename Tt = boost::hana::tuple<>> class State {
 public:
         State () = delete;
         explicit State (Sn sn) : name (std::move (sn)) {}
-        State (Sn sn, Entry<T1> en) : name (std::move (sn)), entry (std::move (en)) {}
-        State (Sn sn, Entry<T1> en, Exit<T2> ex) : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)) {}
-        State (Sn sn, Entry<T1> en, Exit<T2> ex, T3 ts)
+        State (Sn sn, Entry<En> en) : name (std::move (sn)), entry (std::move (en)) {}
+        State (Sn sn, Entry<En> en, Exit<Ex> ex) : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)) {}
+        State (Sn sn, Entry<En> en, Exit<Ex> ex, Tt ts)
             : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
         {
         }
@@ -145,9 +145,9 @@ public:
 
         // private:
         Sn name;
-        Entry<T1> entry;
-        Exit<T2> exit;
-        T3 transitions;
+        Entry<En> entry;
+        Exit<Ex> exit;
+        Tt transitions;
         // constexpr size_t transitionsNumber;
 };
 
@@ -171,7 +171,7 @@ constexpr size_t processGetTransitionSizeOf (size_t index, size_t current, T con
 /**
  *
  */
-template <typename Sn, typename T1, typename T2, typename T3> size_t State<Sn, T1, T2, T3>::getTransitionSizeOf (size_t index) const
+template <typename Sn, typename En, typename Ex, typename Tt> size_t State<Sn, En, Ex, Tt>::getTransitionSizeOf (size_t index) const
 {
         // TODO does not work, why can't I get the size from T3 type directly?
         // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
@@ -192,7 +192,7 @@ template <typename Sn, typename T1, typename T2, typename T3> size_t State<Sn, T
 /**
  *
  */
-template <typename Sn, typename Entry, typename Exit, typename... Trans> auto state (Sn &&sn, Entry &&entry, Exit &&exit, Trans &&... trans)
+template <typename Sn, typename En, typename Ex, typename... Ts> auto state (Sn &&sn, En &&entry, Ex &&exit, Ts &&... trans)
 {
         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
                       boost::hana::tuple (std::forward<decltype (trans)> (trans)...));
@@ -201,7 +201,7 @@ template <typename Sn, typename Entry, typename Exit, typename... Trans> auto st
 /**
  *
  */
-template <typename Sn, typename Entry> auto state (Sn &&sn, Entry &&entry)
+template <typename Sn, typename En> auto state (Sn &&sn, En &&entry)
 {
         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry));
 }

@@ -23,6 +23,7 @@ public:
         Transition (Sn sn, C c, T t) : stateName (std::move (sn)), condition (std::move (c)), actions (std::move (t)) {}
 
         template <typename Ev> Delay runActions (Ev const &ev) { return actions (ev); }
+        void resetActions () { actions.reset (); }
 
         template <typename Ev> bool checkCondition (Ev const &ev) const
         {
@@ -40,6 +41,7 @@ public:
         }
 
         std::type_index getStateIndex () const { return std::type_index (typeid (stateName)); }
+        const char *getStateName () const { return stateName.c_str (); }
 
         // private:
         Sn stateName;
@@ -66,8 +68,10 @@ template <typename Ev> struct ErasedTransitionBase {
         ErasedTransitionBase &operator= (ErasedTransitionBase &&) noexcept = default;
 
         virtual Delay runActions (Ev const &ev) = 0;
+        virtual void resetActions () = 0;
         virtual bool checkCondition (Ev const &ev) const = 0;
         virtual std::type_index getStateIndex () const = 0;
+        virtual const char *getStateName () const = 0;
 };
 
 /**
@@ -83,10 +87,20 @@ template <typename Ev, typename Tr> struct ErasedTransition : public ErasedTrans
         ErasedTransition &operator= (ErasedTransition &&) noexcept = default;
 
         Delay runActions (Ev const &ev) override { return internal.runActions (ev); }
+        void resetActions () override { internal.resetActions (); }
         bool checkCondition (Ev const &ev) const override { return internal.checkCondition (ev); }
         std::type_index getStateIndex () const override { return internal.getStateIndex (); }
+        const char *getStateName () const override { return internal.getStateName (); }
 
         Tr internal;
 };
+
+template <typename Ev, typename Tr> auto erasedTransition (Tr tr) { return ErasedTransition<Ev, Tr> (std::move (tr)); }
+
+template <typename Ev, typename Tt> auto erasedTransitions (Tt &&tt)
+{
+        // There's probably easier way of doing that in hana.
+        return boost::hana::unpack (tt, [] (auto... transition) { return boost::hana::make_tuple (erasedTransition<Ev> (transition)...); });
+}
 
 } // namespace ls
