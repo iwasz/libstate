@@ -91,6 +91,7 @@ template <typename Sn, typename Entry> auto state (Sn &&sn, Entry &&entry)
 
 template <typename Ev> class ErasedStateBase {
 public:
+        ErasedStateBase () = default;
         virtual ~ErasedStateBase () = default;
         ErasedStateBase (ErasedStateBase const &e) = default;
         ErasedStateBase &operator= (ErasedStateBase const &e) = default;
@@ -104,11 +105,13 @@ public:
 
 template <typename Ev, typename S> class ErasedState : public ErasedStateBase<Ev> {
 public:
-        ErasedState (S s) : state (std::move (s)) {}
-        Delay runEntryActions (Ev const &ev) override { return state.entry (ev); }
-        Delay runExitActions (Ev const &ev) override { return state.exit (ev); }
-        S state;
+        ErasedState (S s) : internal (std::move (s)) {}
+        Delay runEntryActions (Ev const &ev) override { return internal.entry (ev); }
+        Delay runExitActions (Ev const &ev) override { return internal.exit (ev); }
+        S internal;
 };
+
+template <typename Ev, typename S> ErasedState<Ev, S> erasedState (S s) { return ErasedState<Ev, S> (std::move (s)); }
 
 /****************************************************************************/
 
@@ -128,21 +131,21 @@ public:
                 // Look for initial state if current is empty (std::optional is used).
                 auto initialState = findInitialState ();
 
-                if (Delay d = initialState->entry (1); d != Delay::zero ()) {
-                        std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
-                                  << std::endl;
-                        timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
-                }
+                // if (Delay d = initialState->internal.entry (1); d != Delay::zero ()) {
+                //         std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
+                //                   << std::endl;
+                //         timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
+                // }
 
                 // currentName = typeid (boost::hana::first (initialStatePair));
                 // auto initialState = boost::hana::second (initialStatePair);
-                currentName = std::type_index (typeid (initialState->name));
+                currentName = std::type_index (typeid (initialState->internal.name));
 
                 // auto initialState = boost::hana::second (initialStatePair);
                 // initialState.runEntryActions (); // There is no event that caused this action to be fired. We are just starting.
 
 #ifndef NDEBUG
-                std::cout << "Initial : " << initialState->name.c_str () << std::endl;
+                std::cout << "Initial : " << initialState->internal.name.c_str () << std::endl;
 #endif
         }
 
@@ -179,10 +182,11 @@ private:
 /// Helper for creating a machine.
 template <typename Ev, typename... Sts> auto machine (Sts &&... states)
 {
-        auto s = boost::hana::make_tuple (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (auto) { return true; })),
-                                          //  ErasedState<int, decltype (std::forward<Sts> (states))> (std::forward<Sts> (states))...));
-                                          std::forward<Sts> (states)...);
-        // TODO this first artificial state -> unique name, no actions.
+        auto s = boost::hana::make_tuple (
+                erasedState<Ev> (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (auto) { return true; }))),
+                erasedState<Ev> (std::forward<Sts> (states))...);
+        // std::forward<Sts> (states)...);
+
         return Machine<Ev, decltype (s)> (std::move (s));
 }
 
@@ -190,12 +194,12 @@ template <typename Ev, typename... Sts> auto machine (Sts &&... states)
 
 template <typename Ev, typename S> auto Machine<Ev, S>::findInitialState () const
 {
-        auto initialState
-                = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'I', 'N', 'I', 'T'>; });
+        auto initialState = boost::hana::find_if (
+                states, [] (auto const &state) { return state.internal.name == boost::hana::string_c<'I', 'N', 'I', 'T'>; });
+
         static_assert (initialState != boost::hana::nothing, "Initial state has to be named \"INIT\"_STATE and it must be defined.");
 
-        auto boostrapState = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'_'>; });
-        return boostrapState;
+        return boost::hana::find_if (states, [] (auto const &state) { return state.internal.name == boost::hana::string_c<'_'>; });
 }
 
 /****************************************************************************/
@@ -203,15 +207,15 @@ template <typename Ev, typename S> auto Machine<Ev, S>::findInitialState () cons
 template <typename Ev, typename St, typename... Rs>
 Delay processRunResetEntryActions (std::type_index const &stateTi, Ev const &ev, St &state, Rs &... rest)
 {
-        if (std::type_index (typeid (state.name)) == stateTi) {
-                if (Delay d = state.entry (ev); d != Delay::zero ()) {
+        if (std::type_index (typeid (state.internal.name)) == stateTi) {
+                if (Delay d = state.internal.entry (ev); d != Delay::zero ()) {
                         std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
                                   << std::endl;
                         return d;
                 }
 
                 // All done, reset.
-                state.entry.reset ();
+                state.internal.entry.reset ();
                 return Delay::zero ();
         }
 
@@ -259,7 +263,7 @@ StateProcessResult Machine<Ev, S>::processTransitions (Q &&eventQueue, St &state
                         std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
 #endif
                         // Run curent.exit
-                        if (Delay d = state.exit (event); d != Delay::zero ()) {
+                        if (Delay d = state.internal.exit (event); d != Delay::zero ()) {
                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
                                           << std::endl;
                                 return {{}, d};
@@ -279,7 +283,7 @@ StateProcessResult Machine<Ev, S>::processTransitions (Q &&eventQueue, St &state
                         runResetEntryActions (*ret, event);
 
                         eventQueue.clear (); // TODO not quite like that
-                        state.exit.reset ();
+                        state.internal.exit.reset ();
                         transition.actions.reset ();
                         return {ret, {}};
                 }
@@ -298,11 +302,11 @@ template <typename Ev, typename S>
 template <typename St, typename Q, typename... Rs>
 StateProcessResult Machine<Ev, S>::processStates (std::type_index const &currentStateTi, Q &&eventQueue, St &state, Rs &... rest)
 {
-        if (std::type_index (typeid (state.name)) == currentStateTi) {
+        if (std::type_index (typeid (state.internal.name)) == currentStateTi) {
 #ifndef NDEBUG
-                std::cout << "Current  : " << state.name.c_str () << std::endl;
+                std::cout << "Current  : " << state.internal.name.c_str () << std::endl;
 #endif
-                return boost::hana::unpack (state.transitions, [this, &eventQueue, &state] (auto &... trans) -> StateProcessResult {
+                return boost::hana::unpack (state.internal.transitions, [this, &eventQueue, &state] (auto &... trans) -> StateProcessResult {
                         if constexpr (sizeof...(trans)) {
                                 return processTransitions (eventQueue, state, trans...);
                         }

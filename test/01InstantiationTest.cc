@@ -44,30 +44,31 @@ private:
  * This test only instantiates some bits of state machine and checks if it is even possible.
  * Does not do any REQUIRE checks.
  */
-TEST_CASE ("First test", "[Instantiation]")
-{
-        State noAction ("A"_STATE);
+// TEST_CASE ("First test", "[Instantiation]")
+// {
+//         State noAction ("A"_STATE);
 
-        State state1 (
-                "A"_STATE,
-                entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, // First entry action is a lambda
-                       Class ("Class instance action"),                                                     // Second is a function object.
-                       actionFunction,                                                                      // Third is a regular function.
-                       actionFunctionTemplate<std::string const &>));                                       // Fourth is a function template.
+//         State state1 (
+//                 "A"_STATE,
+//                 entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, // First entry action is a lambda
+//                        Class ("Class instance action"),                                                     // Second is a function object.
+//                        actionFunction,                                                                      // Third is a regular function.
+//                        actionFunctionTemplate<std::string const &>));                                       // Fourth is a function template.
 
-        State state2 ("A"_STATE,
-                      entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; },
-                             Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>),
-                      exit ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, Class ("Class instance action"),
-                            actionFunction, actionFunctionTemplate<std::string const &>));
+//         State state2 ("A"_STATE,
+//                       entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; },
+//                              Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>),
+//                       exit ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, Class ("Class instance
+//                       action"),
+//                             actionFunction, actionFunctionTemplate<std::string const &>));
 
-        auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
+//         auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
 
-        state2.entry ("hello"s);
-        state2.exit ("hello"s);
+//         state2.entry ("hello"s);
+//         state2.exit ("hello"s);
 
-        state3.entry ("hello"s);
-}
+//         state3.entry ("hello"s);
+// }
 
 /**
  * Machine instance and a few features tested.

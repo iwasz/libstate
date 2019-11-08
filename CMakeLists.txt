@@ -24,14 +24,14 @@ ADD_EXECUTABLE (unittest
     "test/Utils.h"
     "test/00CatchInit.cc"
     "test/01InstantiationTest.cc"
-    "test/02ActionTest.cc"
+    # "test/02ActionTest.cc"
 )
 
 ADD_EXECUTABLE (benchmarktest
-"src/StateMachine.h"
-"src/Action.h"
-"src/Misc.h"
-"test/benchmark.cc"
+    "src/StateMachine.h"
+    "src/Action.h"
+    "src/Misc.h"
+    "test/benchmark.cc"
 )
-# add_definitions(-DNDEBUG)
+
 target_compile_definitions(benchmarktest PRIVATE NDEBUG=1)
