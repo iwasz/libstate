@@ -36,16 +36,17 @@ TEST_CASE ("Check if all called", "[Action]")
         auto res = [&results] (std::string const &message) { return [&results, message] { results.push_back (message); }; };
         auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
 
-        auto m = machine (state ("INIT"_STATE, entry (res ("INIT entry")), exit (res ("INIT exit")),
-                                 transition ("B"_STATE, eq (2), res ("INIT->B action"))),
+        auto m = machine<int> (
+                state ("INIT"_STATE, entry (res ("INIT entry")), exit (res ("INIT exit")),
+                       transition ("B"_STATE, eq (2), res ("INIT->B action"))),
 
-                          state ("B"_STATE, entry (res ("B entry")), exit (res ("B exit")),
-                                 transition ("C"_STATE, eq (3), res ("B->C action1"), res ("B->C action2"))),
+                state ("B"_STATE, entry (res ("B entry")), exit (res ("B exit")),
+                       transition ("C"_STATE, eq (3), res ("B->C action1"), res ("B->C action2"))),
 
-                          state ("C"_STATE, entry (res ("C entry")), exit (res ("C exit")), transition ("B"_STATE, eq (5), res ("C->B action")),
-                                 transition ("FINAL"_STATE, eq (4), res ("C->FINAL action"))),
+                state ("C"_STATE, entry (res ("C entry")), exit (res ("C exit")), transition ("B"_STATE, eq (5), res ("C->B action")),
+                       transition ("FINAL"_STATE, eq (4), res ("C->FINAL action"))),
 
-                          state ("FINAL"_STATE, entry (res ("FINAL entry")))
+                state ("FINAL"_STATE, entry (res ("FINAL entry")))
 
         );
 

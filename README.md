@@ -8,28 +8,31 @@
 1. Running actions in correct order (partially)
 1. Retained input.
 
-# TODO
-* Compilation problem when last action has a transition.
-* All sorts of combinations should be possible when creating a state. With/without either of : entry, exit, transition. Transition 
+# TODOs
+* [ ] state function should accept parameters in different order (more logical order) : exit, then  transitions, then exit. This is because
+  exit action is only needed IF and only if there is at least one transition, but trnsitions can exist WITHOUT an exit action.
+* [ ] Compilation problem when last action has a transition.
+* [ ]All sorts of combinations should be possible when creating a state. With/without either of : entry, exit, transition. Transition 
 should be with or without either of : condition, action (s).
-* Make state with no actions possible .
-* EventQueue by lvl reference (non const).
-* Consider adding input actions, I might be wrong, but I think I used one of those in MC60 (forgetting abit the name "input action").
-* All sorts of misuses should be pointed out in compile time with meaningful messages (use static_asserts 
+* [ ] Make state with no actions possible.
+* [ ] EventQueue by lvl reference (non const). Justify it in the docs (this queue is sort of a state machine internal state and this state
+must be persisted between calls to run). 
+* [ ] Consider adding input actions, I might be wrong, but I think I used one of those in MC60 (forgetting abit the name "input action").
+* [ ] All sorts of misuses should be pointed out in compile time with meaningful messages (use static_asserts 
   whenever possible).
-* Nullary conditions does not work.
-* Meaningful message when condition argumnet type is incompatible with event type, and so on.
- * TODO Allow raising an event from inside of actions (somehow).
- * TODO The code is so generic, that it sometimes accepts wrong type of arguments,
- * like you can pass transition instead of a state. It should be convinient if
- * the compiler reported shuch a misuse on early stage and with meaningful messages.
- * TODO configurable (as template argument?) output class. Defaults to std::cout. oh,
-  it also can be a lambda passed to the run method or something.
-* events as std::tuples or std::pairs, and then actions and conditions would get parameter pack of arguments.
+* [ ] Nullary conditions does not work.
+* [ ] Meaningful message when condition argumnet type is incompatible with event type, and so on.
+* [ ] Allow raising an event from inside of actions (somehow).
+* [ ] The code is so generic, that it sometimes accepts wrong type of arguments,
+* [ ] like you can pass transition instead of a state. It should be convinient if
+the compiler reported shuch a misuse on early stage and with meaningful messages.
+* [ ] configurable (as a template argument?) output class. Defaults to std::cout. oh,
+it also can be a lambda passed to the run method or something.
+* events as std::tuples or std::pairs, and then actions and conditions would get parameter pack of arguments (hana::unpacked or std::apply-ied).
 
-Copy (in Polish) of TODOs from the previous version of the lib.
+Copy (in Polish) of TODOs from the previous version of the lib. 
  
- * TODO Dodać globalny timeout. Jeśli w danym timeoucie nie uda się zmienić stanu, to trzeba podjąć jakąć
+* TODO Dodać globalny timeout. Jeśli w danym timeoucie nie uda się zmienić stanu, to trzeba podjąć jakąć
   akcję. Ej to chyba jest!
  
  * TODO dokumentacja z tutorialem jest niezbędna, bo ja sam mam czasem problemy. Jak są ewaluowane warunki,
@@ -164,7 +167,12 @@ Time as Linux *time* command shows in *real* row. Binary size is in parentheses 
 * libstatemachine **f3c19e87249232ecd65482eac8218fe744f37c15**
 * libstate **df8621dd42cb67af13dcf43ce051c95cbdfbef00**
 
-| libstatemachine Debug | Release       | libstate Debug | Release      |
-| --------------------- | ------------- | -------------- | ------------ |
-| 0,228s (482K)         | 0,111s (223K) | 0,560s (8,9M)  | 0,085s (77K) |
+| libstatemachine Debug | Release      | libstate Debug | Release       |
+| --------------------- | ------------ | -------------- | ------------- |
+| 0,228s (482K)         | 0,085s (77K) | 0,560s (8,9M)  | 0,111s (223K) |
 
+* libstate **de083d4458ebee313b995fb66eeafad6094f4bd3** - methodology of running state machine was fixed so it is the same as in the other benchmark (in libstatemachine).
+
+| libstate Debug | Release       |
+| -------------- | ------------- |
+| 0,516s (15M)   | 0,107s (230K) |

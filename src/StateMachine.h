@@ -31,6 +31,8 @@ namespace ls {
 // TODO This is a GNU extension. Provide macro as an option. Or better still, use hana::string explicitly
 template <typename C, C... c> constexpr auto operator""_STATE () { return boost::hana::string_c<c...>; }
 
+/****************************************************************************/
+
 /**
  *
  */
@@ -53,8 +55,11 @@ template <typename Sn, typename Cond, typename... Acts> auto transition (Sn &&sn
                            transitionAction (std::forward<decltype (acts)> (acts)...));
 };
 
-// template <typename... Ts> auto transitions (Ts &&... ts) { return hana::make_tuple (std::forward<Ts> (ts)...); }
+/****************************************************************************/
 
+/**
+ * A state - typesafe version.
+ */
 template <typename Sn, typename T1 = void, typename T2 = void, typename T3 = boost::hana::tuple<>> class State {
 public:
         State () = delete;
@@ -84,6 +89,29 @@ template <typename Sn, typename Entry> auto state (Sn &&sn, Entry &&entry)
         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry));
 }
 
+template <typename Ev> class ErasedStateBase {
+public:
+        virtual ~ErasedStateBase () = default;
+        ErasedStateBase (ErasedStateBase const &e) = default;
+        ErasedStateBase &operator= (ErasedStateBase const &e) = default;
+        ErasedStateBase (ErasedStateBase &&e) noexcept = default;
+        ErasedStateBase &operator= (ErasedStateBase &&e) noexcept = default;
+
+        virtual Delay runEntryActions (Ev const &ev) = 0;
+        virtual Delay runExitActions (Ev const &ev) = 0;
+        // Transitions - but how?
+};
+
+template <typename Ev, typename S> class ErasedState : public ErasedStateBase<Ev> {
+public:
+        ErasedState (S s) : state (std::move (s)) {}
+        Delay runEntryActions (Ev const &ev) override { return state.entry (ev); }
+        Delay runExitActions (Ev const &ev) override { return state.exit (ev); }
+        S state;
+};
+
+/****************************************************************************/
+
 // TODO if processX were moved into the class, move this as well
 struct StateProcessResult {
         std::optional<std::type_index> newStateName{};
@@ -93,7 +121,7 @@ struct StateProcessResult {
 /**
  *
  */
-template <typename S> class Machine {
+template <typename Ev, typename S> class Machine {
 public:
         explicit Machine (S s) : states{std::move (s)}
         {
@@ -138,7 +166,7 @@ private:
         template <typename Q, typename St, typename T, typename... Tr>
         StateProcessResult processTransitions (Q &&eventQueue, St &state, T &transition, Tr &... rest);
 
-        template <typename Ev> Delay runResetEntryActions (std::type_index const &stateTi, Ev const &ev);
+        Delay runResetEntryActions (std::type_index const &stateTi, Ev const &ev);
 
 private:
         S states;                                     /// boost::hana::tuple of States. TODO hana map
@@ -149,17 +177,18 @@ private:
 /*--------------------------------------------------------------------------*/
 
 /// Helper for creating a machine.
-template <typename... Sts> auto machine (Sts &&... states)
+template <typename Ev, typename... Sts> auto machine (Sts &&... states)
 {
+        auto s = boost::hana::make_tuple (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (auto) { return true; })),
+                                          //  ErasedState<int, decltype (std::forward<Sts> (states))> (std::forward<Sts> (states))...));
+                                          std::forward<Sts> (states)...);
         // TODO this first artificial state -> unique name, no actions.
-        return Machine (
-                boost::hana::make_tuple (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (auto) { return true; })),
-                                         std::forward<Sts> (states)...));
+        return Machine<Ev, decltype (s)> (std::move (s));
 }
 
 /****************************************************************************/
 
-template <typename S> auto Machine<S>::findInitialState () const
+template <typename Ev, typename S> auto Machine<Ev, S>::findInitialState () const
 {
         auto initialState
                 = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'I', 'N', 'I', 'T'>; });
@@ -195,7 +224,7 @@ Delay processRunResetEntryActions (std::type_index const &stateTi, Ev const &ev,
 
 /****************************************************************************/
 
-template <typename S> template <typename Ev> Delay Machine<S>::runResetEntryActions (std::type_index const &stateTi, Ev const &ev)
+template <typename Ev, typename S> Delay Machine<Ev, S>::runResetEntryActions (std::type_index const &stateTi, Ev const &ev)
 {
         return boost::hana::unpack (states, [&stateTi, &ev] (auto &... states) { return processRunResetEntryActions (stateTi, ev, states...); });
 }
@@ -216,9 +245,9 @@ template <typename Ev, typename Cn> bool checkCondition (Ev const &ev, Cn &cn)
         }
 }
 
-template <typename S>
+template <typename Ev, typename S>
 template <typename Q, typename St, typename T, typename... Tr>
-StateProcessResult Machine<S>::processTransitions (Q &&eventQueue, St &state, T &transition, Tr &... rest)
+StateProcessResult Machine<Ev, S>::processTransitions (Q &&eventQueue, St &state, T &transition, Tr &... rest)
 {
         for (auto const &event : eventQueue) {
 
@@ -265,9 +294,9 @@ StateProcessResult Machine<S>::processTransitions (Q &&eventQueue, St &state, T 
 
 /****************************************************************************/
 
-template <typename S>
+template <typename Ev, typename S>
 template <typename St, typename Q, typename... Rs>
-StateProcessResult Machine<S>::processStates (std::type_index const &currentStateTi, Q &&eventQueue, St &state, Rs &... rest)
+StateProcessResult Machine<Ev, S>::processStates (std::type_index const &currentStateTi, Q &&eventQueue, St &state, Rs &... rest)
 {
         if (std::type_index (typeid (state.name)) == currentStateTi) {
 #ifndef NDEBUG
@@ -291,7 +320,7 @@ StateProcessResult Machine<S>::processStates (std::type_index const &currentStat
 
 /****************************************************************************/
 
-template <typename S> template <typename Q> void Machine<S>::run (Q &&eventQueue)
+template <typename Ev, typename S> template <typename Q> void Machine<Ev, S>::run (Q &&eventQueue)
 {
         if (!timer.isExpired ()) {
                 return;
