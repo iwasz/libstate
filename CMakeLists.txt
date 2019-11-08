@@ -19,6 +19,8 @@ ADD_EXECUTABLE (unittest
     "src/StateMachine.h"
     "src/Action.h"
     "src/Misc.h"
+    "src/State.h"
+    "src/Transition.h"
 
     "test/Utils.cc"
     "test/Utils.h"
