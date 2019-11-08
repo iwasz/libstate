@@ -136,20 +136,6 @@ template <typename Ev, typename S> Delay Machine<Ev, S>::runResetEntryActions (s
 
 /****************************************************************************/
 
-template <typename Ev, typename Cn> bool checkCondition (Ev const &ev, Cn &cn)
-{
-        if constexpr (std::is_invocable_v<Cn, Ev>) {
-                return cn (ev);
-        }
-        else {
-                static_assert (std::is_invocable_v<Cn>,
-                               "Incompatibility between an event, and a condition(s) which checks this event. Conditions may have a single "
-                               "event argument or no arguments at all.");
-
-                return cn ();
-        }
-}
-
 template <typename Ev, typename S>
 template <typename Q, typename St, typename T, typename... Tr>
 StateProcessResult Machine<Ev, S>::processTransitions (Q &&eventQueue, St &state, T &transition, Tr &... rest)
