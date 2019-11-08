@@ -31,11 +31,14 @@ template <typename Ev> struct ErasedStateBase {
         ErasedStateBase (ErasedStateBase &&e) noexcept = default;
         ErasedStateBase &operator= (ErasedStateBase &&e) noexcept = default;
 
-        virtual Delay runEntryActions (Ev const &ev) = 0;
-        virtual Delay runExitActions (Ev const &ev) = 0;
+        virtual const char *getName () const = 0;
 
-        // Transitions - but how?
-        virtual size_t getTransitionSizeOf (size_t index) const = 0;
+        virtual Delay runEntryActions (Ev const &ev) = 0;
+        virtual void resetEntryActions () = 0;
+
+        virtual Delay runExitActions (Ev const &ev) = 0;
+        virtual void resetExitActions () = 0;
+
         virtual ErasedTransitionBase<Ev> *getTransition (size_t index) const = 0;
 };
 
@@ -51,20 +54,17 @@ public:
         {
         }
 
-        Delay runEntryActions (Ev const &ev) override
-        { /* return internal.runEntryActions (ev); */
-        }
-        Delay runExitActions (Ev const &ev) override
-        { /*  return internal.runExitActions (ev); */
-        }
+        const char *getName () const override { return name.c_str (); }
 
-        size_t getTransitionSizeOf (size_t index) const override
-        { /* return internal.getTransitionSizeOf (index);  */
-        }
+        Delay runEntryActions (Ev const &ev) override { return entry (ev); }
+        void resetEntryActions () override { entry.reset (); }
+
+        Delay runExitActions (Ev const &ev) override { return exit (ev); }
+        void resetExitActions () override { exit.reset (); }
+
         ErasedTransitionBase<Ev> *getTransition (size_t index) const override;
 
-        // S internal;
-
+        // private:
         Sn name; // name, entry and exit has the same tyypes and values as in State object
         Entry<T1> entry;
         Exit<T2> exit;
@@ -96,13 +96,13 @@ ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t
 {
         // TODO does not work, why can't I get the size from T3 type directly?
         // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
-        // return boost::hana::unpack (internal.transitions, [index] (auto const &... trans) -> ErasedTransitionBase<Ev> * {
-        //         if constexpr (sizeof...(trans) > 0) {
-        //                 return processGetTransition<Ev> (index, 0, trans...);
-        //         }
+        return boost::hana::unpack (transitions, [index] (auto const &... trans) -> ErasedTransitionBase<Ev> * {
+                if constexpr (sizeof...(trans) > 0) {
+                        return processGetTransition<Ev> (index, 0, trans...);
+                }
 
-        //         return nullptr;
-        // });
+                return nullptr;
+        });
 
         return nullptr; // TODO
 }
@@ -131,11 +131,7 @@ public:
         {
         }
 
-        constexpr const char *getName () const { return name.c_str (); }
-        template <typename Ev> Delay runEntryActions (Ev const &ev) { return entry (ev); }
-        template <typename Ev> Delay runExitActions (Ev const &ev) { return exit (ev); }
-
-        size_t getTransitionSizeOf (size_t index) const;
+        // size_t getTransitionSizeOf (size_t index) const;
         // ErasedTransitionBase< Ev>
 
         // template <typename Ev>
@@ -171,23 +167,23 @@ constexpr size_t processGetTransitionSizeOf (size_t index, size_t current, T con
 /**
  *
  */
-template <typename Sn, typename En, typename Ex, typename Tt> size_t State<Sn, En, Ex, Tt>::getTransitionSizeOf (size_t index) const
-{
-        // TODO does not work, why can't I get the size from T3 type directly?
-        // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
-        return boost::hana::unpack (transitions, [index] (auto const &... trans) -> size_t {
-                if constexpr (sizeof...(trans) > 0) {
-                        return processGetTransitionSizeOf (index, 0, trans...);
-                }
+// template <typename Sn, typename En, typename Ex, typename Tt> size_t State<Sn, En, Ex, Tt>::getTransitionSizeOf (size_t index) const
+// {
+//         // TODO does not work, why can't I get the size from T3 type directly?
+//         // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
+//         return boost::hana::unpack (transitions, [index] (auto const &... trans) -> size_t {
+//                 if constexpr (sizeof...(trans) > 0) {
+//                         return processGetTransitionSizeOf (index, 0, trans...);
+//                 }
 
-                return 0;
-        });
+//                 return 0;
+//         });
 
-        std::cout << std::endl;
-        // }
+//         std::cout << std::endl;
+//         // }
 
-        return 0;
-}
+//         return 0;
+// }
 
 /**
  *

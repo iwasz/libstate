@@ -61,6 +61,7 @@ public:
 
 private:
         auto findInitialState () const;
+        auto getState (std::type_index const & /* ti*/);
 
         template <typename St, typename Q, typename... Rs>
         StateProcessResult processStates (std::type_index const &currentStateTi, Q &&eventQueue, St &state, Rs &... rest);
@@ -76,6 +77,7 @@ private:
         S states;                                     /// boost::hana::tuple of States. TODO hana map
         std::optional<std::type_index> currentName{}; /// Current state name. // TODO use type_index
         ErasedStateBase<Ev> *currentState{};
+        ErasedStateBase<Ev> *prevState{};
         Timer timer{};
 };
 
@@ -102,6 +104,30 @@ template <typename Ev, typename S> auto Machine<Ev, S>::findInitialState () cons
         static_assert (initialState != boost::hana::nothing, "Initial state has to be named \"INIT\"_STATE and it must be defined.");
 
         return *boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'_'>; });
+}
+
+template <typename Ev, typename St, typename... Rs> ErasedStateBase<Ev> *processGetState (std::type_index const &ti, St &st, Rs &... rest)
+{
+        if (ti == std::type_index (typeid (st))) {
+                return &st;
+        }
+
+        if constexpr (sizeof...(rest)) {
+                return processGetState<Ev> (ti, rest...);
+        }
+
+        return nullptr;
+}
+
+template <typename Ev, typename S> auto Machine<Ev, S>::getState (std::type_index const &ti)
+{
+        return boost::hana::unpack (states, [&ti] (auto &... sts) -> ErasedStateBase<Ev> * {
+                if constexpr (sizeof...(sts)) {
+                        return processGetState<Ev> (ti, sts...);
+                }
+
+                return nullptr;
+        });
 }
 
 /****************************************************************************/
@@ -228,30 +254,77 @@ template <typename Ev, typename S> template <typename Q> void Machine<Ev, S>::ru
         std::cout << "== Run ==" << std::endl;
 #endif
         Expects (currentName);
-        std::type_index &currentStateNameCopy = *currentName;
+        // std::type_index &currentStateNameCopy = *currentName;
 
         if (!currentState) {
                 auto initialState = findInitialState ();
                 currentState = &initialState;
-                std::cout << currentState->getTransitionSizeOf (0) << std::endl;
+                // std::cout << currentState->getTransitionSizeOf (0) << std::endl;
         }
 
-        StateProcessResult result
-                = boost::hana::unpack (states, [this, &currentStateNameCopy, &eventQueue] (auto &... arg) -> StateProcessResult {
-                          if constexpr (sizeof...(arg)) {
-                                  return processStates (currentStateNameCopy, eventQueue, arg...);
-                          }
+        int i = 0;
+        ErasedTransitionBase<Ev> *trans{};
+        while ((trans = currentState->getTransition (i++))) {
 
-                          return {};
-                  });
+                for (auto const &event : eventQueue) {
 
-        if (result.newStateName) {
-                currentName = result.newStateName;
+                        // Perform the transition
+                        if (trans->checkCondition (event)) {
+#ifndef NDEBUG
+                                std::cout << "Transition to : " << trans->getStateName () << std::endl;
+#endif
+                                if (Delay d = currentState->runExitActions (event); d != Delay::zero ()) {
+                                        std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count ()
+                                                  << "ms" << std::endl;
+
+                                        timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
+                                        goto end;
+                                }
+
+                                if (Delay d = trans->runActions (event); d != Delay::zero ()) {
+                                        std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count ()
+                                                  << "ms" << std::endl;
+
+                                        timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
+                                        goto end;
+                                }
+
+                                // Change current name.
+                                prevState = currentState;
+                                currentState = getState (trans->getStateIndex ());
+
+                                // - run current.entry
+                                currentState->runEntryActions (event);
+                                eventQueue.clear (); // TODO not quite like that
+
+                                if (prevState) {
+                                        prevState->resetExitActions ();
+                                }
+
+                                trans->resetActions ();
+                                currentState->resetEntryActions ();
+                        }
+                }
         }
-        else if (result.delay != Delay::zero ()) {
-                // TODO modify timer, and get rid of the cast.
-                timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (result.delay).count ());
-        }
+
+end:;
+
+        // StateProcessResult result
+        //         = boost::hana::unpack (states, [this, &currentStateNameCopy, &eventQueue] (auto &... arg) -> StateProcessResult {
+        //                   if constexpr (sizeof...(arg)) {
+        //                           return processStates (currentStateNameCopy, eventQueue, arg...);
+        //                   }
+
+        //                   return {};
+        //           });
+
+        // if (result.newStateName) {
+        //         currentName = result.newStateName;
+        // }
+        // else if (result.delay != Delay::zero ()) {
+        //         // TODO modify timer, and get rid of the cast.
+        //         timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (result.delay).count ());
+        // }
 }
 
 } // namespace ls

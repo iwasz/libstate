@@ -9,6 +9,7 @@
 1. Retained input.
 
 # TODOs
+* [ ] When wrappers are sorted out, pay attention to function / method / lambda argument types (&, &&, universal && etc).
 * [ ] state function should accept parameters in different order (more logical order) : exit, then  transitions, then exit. This is because
   exit action is only needed IF and only if there is at least one transition, but trnsitions can exist WITHOUT an exit action.
 * [ ] Compilation problem when last action has a transition.
