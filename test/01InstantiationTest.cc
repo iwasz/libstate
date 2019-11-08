@@ -77,6 +77,13 @@ TEST_CASE ("Machine instance", "[Instantiation]")
 {
         using namespace hana::literals;
 
+        // auto a = hana::make_tuple (
+        //         erasedState<int> (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (auto) { return true; }))));
+
+        // ErasedStateBase<int> *p = &a[hana::int_c<0>];
+        // std::cout << p->getTransitionSizeOf (0) << std::endl;
+        // return;
+
         auto m = machine<int> (
                 state ("INIT"_STATE,
                        entry (

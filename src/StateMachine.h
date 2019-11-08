@@ -13,6 +13,7 @@
 #include <boost/hana.hpp>
 #include <boost/hana/fwd/integral_constant.hpp>
 #include <boost/hana/fwd/length.hpp>
+#include <boost/hana/fwd/tuple.hpp>
 #include <boost/hana/fwd/unpack.hpp>
 #include <chrono>
 #include <gsl/gsl>
@@ -71,12 +72,53 @@ public:
         {
         }
 
+        constexpr const char *getName () const { return name.c_str (); }
+
+        template <typename Ev> Delay runEntryActions (Ev const &ev) { return entry (ev); }
+
+        template <typename Ev> Delay runExitActions (Ev const &ev) { return exit (ev); }
+
+        size_t getTransitionSizeOf (size_t index) const;
+
         // private:
         Sn name;
         Entry<T1> entry;
         Exit<T2> exit;
         T3 transitions;
+        // constexpr size_t transitionsNumber;
 };
+
+template <typename T, typename... Rs>
+constexpr size_t processGetTransitionSizeOf (size_t index, size_t current, T const &transition, Rs const &... rest)
+{
+        if (index == current) {
+                return sizeof (transition);
+        }
+
+        if constexpr (sizeof...(rest)) {
+                return processGetTransitionSizeOf (index, current + 1, rest...);
+        }
+
+        return 0;
+}
+
+template <typename Sn, typename T1, typename T2, typename T3> size_t State<Sn, T1, T2, T3>::getTransitionSizeOf (size_t index) const
+{
+        // TODO does not work, why can't I get the size from T3 type directly?
+        // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
+        return boost::hana::unpack (transitions, [index] (auto const &... trans) -> size_t {
+                if constexpr (sizeof...(trans) > 0) {
+                        return processGetTransitionSizeOf (index, 0, trans...);
+                }
+
+                return 0;
+        });
+
+        std::cout << std::endl;
+        // }
+
+        return 0;
+}
 
 template <typename Sn, typename Entry, typename Exit, typename... Trans> auto state (Sn &&sn, Entry &&entry, Exit &&exit, Trans &&... trans)
 {
@@ -100,14 +142,18 @@ public:
 
         virtual Delay runEntryActions (Ev const &ev) = 0;
         virtual Delay runExitActions (Ev const &ev) = 0;
+
         // Transitions - but how?
+        virtual size_t getTransitionSizeOf (size_t index) const = 0;
 };
 
 template <typename Ev, typename S> class ErasedState : public ErasedStateBase<Ev> {
 public:
-        ErasedState (S s) : internal (std::move (s)) {}
-        Delay runEntryActions (Ev const &ev) override { return internal.entry (ev); }
-        Delay runExitActions (Ev const &ev) override { return internal.exit (ev); }
+        explicit ErasedState (S s) : internal (std::move (s)) {}
+        Delay runEntryActions (Ev const &ev) override { return internal.runEntryActions (ev); }
+        Delay runExitActions (Ev const &ev) override { return internal.runExitActions (ev); }
+        size_t getTransitionSizeOf (size_t index) const override { return internal.getTransitionSizeOf (index); }
+
         S internal;
 };
 
@@ -130,22 +176,10 @@ public:
         {
                 // Look for initial state if current is empty (std::optional is used).
                 auto initialState = findInitialState ();
-
-                // if (Delay d = initialState->internal.entry (1); d != Delay::zero ()) {
-                //         std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
-                //                   << std::endl;
-                //         timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
-                // }
-
-                // currentName = typeid (boost::hana::first (initialStatePair));
-                // auto initialState = boost::hana::second (initialStatePair);
-                currentName = std::type_index (typeid (initialState->internal.name));
-
-                // auto initialState = boost::hana::second (initialStatePair);
-                // initialState.runEntryActions (); // There is no event that caused this action to be fired. We are just starting.
+                currentName = std::type_index (typeid (initialState.internal.name));
 
 #ifndef NDEBUG
-                std::cout << "Initial : " << initialState->internal.name.c_str () << std::endl;
+                std::cout << "Initial : " << initialState.internal.name.c_str () << std::endl;
 #endif
         }
 
@@ -171,9 +205,12 @@ private:
 
         Delay runResetEntryActions (std::type_index const &stateTi, Ev const &ev);
 
+        ErasedStateBase<Ev> *findState (std::type_index const &stateIndex) {}
+
 private:
         S states;                                     /// boost::hana::tuple of States. TODO hana map
         std::optional<std::type_index> currentName{}; /// Current state name. // TODO use type_index
+        ErasedStateBase<Ev> *currentState{};
         Timer timer{};
 };
 
@@ -185,7 +222,6 @@ template <typename Ev, typename... Sts> auto machine (Sts &&... states)
         auto s = boost::hana::make_tuple (
                 erasedState<Ev> (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (auto) { return true; }))),
                 erasedState<Ev> (std::forward<Sts> (states))...);
-        // std::forward<Sts> (states)...);
 
         return Machine<Ev, decltype (s)> (std::move (s));
 }
@@ -199,7 +235,7 @@ template <typename Ev, typename S> auto Machine<Ev, S>::findInitialState () cons
 
         static_assert (initialState != boost::hana::nothing, "Initial state has to be named \"INIT\"_STATE and it must be defined.");
 
-        return boost::hana::find_if (states, [] (auto const &state) { return state.internal.name == boost::hana::string_c<'_'>; });
+        return *boost::hana::find_if (states, [] (auto const &state) { return state.internal.name == boost::hana::string_c<'_'>; });
 }
 
 /****************************************************************************/
@@ -263,6 +299,13 @@ StateProcessResult Machine<Ev, S>::processTransitions (Q &&eventQueue, St &state
                         std::cout << "Transition to : " << transition.stateName.c_str () << std::endl;
 #endif
                         // Run curent.exit
+                        // if (Delay d = currentState->runExitActions (event); d != Delay::zero ()) {
+                        //         std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () <<
+                        //         "ms"
+                        //                   << std::endl;
+                        //         return {{}, d};
+                        // }
+
                         if (Delay d = state.internal.exit (event); d != Delay::zero ()) {
                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
                                           << std::endl;
@@ -335,6 +378,12 @@ template <typename Ev, typename S> template <typename Q> void Machine<Ev, S>::ru
 #endif
         Expects (currentName);
         std::type_index &currentStateNameCopy = *currentName;
+
+        if (!currentState) {
+                auto initialState = findInitialState ();
+                currentState = &initialState;
+                std::cout << currentState->getTransitionSizeOf (0) << std::endl;
+        }
 
         StateProcessResult result
                 = boost::hana::unpack (states, [this, &currentStateNameCopy, &eventQueue] (auto &... arg) -> StateProcessResult {
