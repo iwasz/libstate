@@ -39,7 +39,8 @@ template <typename Ev> struct ErasedStateBase {
         virtual Delay runExitActions (Ev const &ev) = 0;
         virtual void resetExitActions () = 0;
 
-        virtual ErasedTransitionBase<Ev> *getTransition (size_t index) const = 0;
+        // TODO maybe return const and make method const and then change ErasedTransition interface to permit reset on const object and...
+        virtual ErasedTransitionBase<Ev> *getTransition (size_t index) = 0;
 };
 
 /**
@@ -54,6 +55,11 @@ public:
         {
         }
 
+        ErasedState (ErasedState const &e) = default;
+        ErasedState &operator= (ErasedState const &e) = default;
+        ErasedState (ErasedState &&e) noexcept = default;
+        ErasedState &operator= (ErasedState &&e) noexcept = default;
+
         const char *getName () const override { return name.c_str (); }
 
         Delay runEntryActions (Ev const &ev) override { return entry (ev); }
@@ -62,7 +68,7 @@ public:
         Delay runExitActions (Ev const &ev) override { return exit (ev); }
         void resetExitActions () override { exit.reset (); }
 
-        ErasedTransitionBase<Ev> *getTransition (size_t index) const override;
+        ErasedTransitionBase<Ev> *getTransition (size_t index) override;
 
         // private:
         Sn name; // name, entry and exit has the same tyypes and values as in State object
@@ -75,10 +81,10 @@ public:
  *
  */
 template <typename Ev, typename T, typename... Rs>
-constexpr ErasedTransitionBase<Ev> *processGetTransition (size_t index, size_t current, T const &transition, Rs const &... rest)
+constexpr ErasedTransitionBase<Ev> *processGetTransition (size_t index, size_t current, T &transition, Rs &... rest)
 {
         if (index == current) {
-                return nullptr; // &transition;
+                return &transition;
         }
 
         if constexpr (sizeof...(rest)) {
@@ -92,11 +98,11 @@ constexpr ErasedTransitionBase<Ev> *processGetTransition (size_t index, size_t c
  *
  */
 template <typename Ev, typename Sn, typename T1, typename T2, typename T3>
-ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t index) const
+ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t index)
 {
         // TODO does not work, why can't I get the size from T3 type directly?
         // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
-        return boost::hana::unpack (transitions, [index] (auto const &... trans) -> ErasedTransitionBase<Ev> * {
+        return boost::hana::unpack (transitions, [index] (auto &... trans) -> ErasedTransitionBase<Ev> * {
                 if constexpr (sizeof...(trans) > 0) {
                         return processGetTransition<Ev> (index, 0, trans...);
                 }

@@ -18,7 +18,7 @@ int main ()
         auto res = [&results] (std::string const &message) { return [&results, message] { results.push_back (message); }; };
         auto eq = [] (std::string const &what) { return [what] (auto const &i) { return i == what; }; };
 
-        auto m = machine (
+        auto m = machine<std::string> (
                 state ("INIT"_STATE, entry (res ("INIT entry")), exit (res ("INIT exit")), transition ("B"_STATE, eq ("2"), res ("action"))),
 
                 state ("B"_STATE, entry (res ("B entry")), exit (res ("B exit")),
@@ -77,7 +77,7 @@ int main ()
                        transition ("N"_STATE, eq ("-16"), res ("action"), res ("another")),
                        transition ("FINAL"_STATE, eq ("16"), res ("action"), res ("another"))),
 
-                state ("FINAL"_STATE, entry (res ("FINAL entry"), exit (res ("FINAL exit"))))
+                state ("FINAL"_STATE, entry (res ("FINAL entry")), exit (res ("FINAL exit")))
 
         );
 

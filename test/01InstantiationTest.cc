@@ -44,45 +44,39 @@ private:
  * This test only instantiates some bits of state machine and checks if it is even possible.
  * Does not do any REQUIRE checks.
  */
-// TEST_CASE ("First test", "[Instantiation]")
-// {
-//         State noAction ("A"_STATE);
+TEST_CASE ("First test", "[Instantiation]")
+{
+        State noAction ("A"_STATE);
 
-//         State state1 (
-//                 "A"_STATE,
-//                 entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, // First entry action is a lambda
-//                        Class ("Class instance action"),                                                     // Second is a function object.
-//                        actionFunction,                                                                      // Third is a regular function.
-//                        actionFunctionTemplate<std::string const &>));                                       // Fourth is a function template.
+        State state1 (
+                "A"_STATE,
+                entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, // First entry action is a lambda
+                       Class ("Class instance action"),                                                     // Second is a function object.
+                       actionFunction,                                                                      // Third is a regular function.
+                       actionFunctionTemplate<std::string const &>));                                       // Fourth is a function template.
 
-//         State state2 ("A"_STATE,
-//                       entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; },
-//                              Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>),
-//                       exit ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, Class ("Class instance
-//                       action"),
-//                             actionFunction, actionFunctionTemplate<std::string const &>));
+        State state2 ("A"_STATE,
+                      entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; },
+                             Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>),
+                      exit ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, Class ("Class instance action"),
+                            actionFunction, actionFunctionTemplate<std::string const &>));
 
-//         auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
+        auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
 
-//         state2.entry ("hello"s);
-//         state2.exit ("hello"s);
+        state2.entry ("hello"s);
+        state2.exit ("hello"s);
 
-//         state3.entry ("hello"s);
-// }
+        state3.entry ("hello"s);
+}
 
 /**
  * Machine instance and a few features tested.
  */
 TEST_CASE ("Machine instance", "[Instantiation]")
 {
-        using namespace hana::literals;
-
-        // auto a = hana::make_tuple (
-        //         erasedState<int> (state ("_"_STATE, entry ([] {}), exit ([] {}), transition ("INIT"_STATE, [] (auto) { return true; }))));
-
-        // ErasedStateBase<int> *p = &a[hana::int_c<0>];
-        // std::cout << p->getTransitionSizeOf (0) << std::endl;
-        // return;
+        // using namespace hana::literals;
+        // TODO does not compile. hana::tuple <ErasedTransition... has no copy constructor?
+        // auto log = [] (std::string const &message) { return [message] () { std::cout << message << std::endl; }; };
 
         auto m = machine<int> (
                 state ("INIT"_STATE,
@@ -100,7 +94,8 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                [] () {
                                        std::cout << "4th entry" << std::endl;
                                        return 500ms;
-                               }),
+                               }/* ,
+                               log ("Action") */),
                        exit ([] { std::cout << "1st exit" << std::endl; }), transition ("B"_STATE, [] (int i) { return i == 2; })),
 
                 state ("B"_STATE, entry (At ("Z")),
@@ -125,27 +120,26 @@ TEST_CASE ("Machine instance", "[Instantiation]")
          * fires upon event '2', the state is changed.
          */
         m.run (std::deque{1, 2});
-        // State is successfully changed to "B"_STATE.
-        REQUIRE (m.getCurrentStateName ());
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("INIT"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "INIT"s);
 
+        // State is successfully changed to "B"_STATE.
         m.run (std::deque{1, 2});
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "B"s);
 
         std::deque deq{3};
         m.run (deq);        // Transition condition is met, so run exit action which waits for 1000ms
         m.waitAndRun (deq); // After the wait run following exit actions (if any) and change state.
         m.waitAndRun (deq); // After the wait run following exit actions (if any) and change state.
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "C"s);
 
         m.run (std::deque{5});
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "B"s);
 
         m.run (std::deque{3});
         m.waitAndRun (std::deque{3});
         m.waitAndRun (std::deque{3});
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "C"s);
 
         m.run (std::deque{4, 7}); // Transition condition is satisfied.
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("FINAL"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "FINAL"s);
 }

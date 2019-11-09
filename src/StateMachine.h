@@ -40,11 +40,11 @@ public:
         explicit Machine (S s) : states{std::move (s)}
         {
                 // Look for initial state if current is empty (std::optional is used).
-                auto initialState = findInitialState ();
-                currentName = std::type_index (typeid (initialState.name));
+                // auto initialState = findInitialState ();
+                // currentName = std::type_index (typeid (initialState.name));
 
 #ifndef NDEBUG
-                std::cout << "Initial : " << initialState.name.c_str () << std::endl;
+                // std::cout << "Initial : " << initialState.name.c_str () << std::endl;
 #endif
         }
 
@@ -56,12 +56,13 @@ public:
                 run (std::forward<Q> (queue));
         }
 
-        auto getCurrentStateName () const { return currentName; }
+        auto getCurrentStateName () const { return currentName; } // TODO remove
+        const char *getCurrentStateName2 () const { return currentState->getName (); }
         bool isWaiting () const { return !timer.isExpired (); }
 
 private:
         auto findInitialState () const;
-        auto getState (std::type_index const & /* ti*/);
+        auto getState (std::type_index const & /* ti*/) -> ErasedStateBase<Ev> *;
 
         template <typename St, typename Q, typename... Rs>
         StateProcessResult processStates (std::type_index const &currentStateTi, Q &&eventQueue, St &state, Rs &... rest);
@@ -103,12 +104,16 @@ template <typename Ev, typename S> auto Machine<Ev, S>::findInitialState () cons
 
         static_assert (initialState != boost::hana::nothing, "Initial state has to be named \"INIT\"_STATE and it must be defined.");
 
-        return *boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'_'>; });
+        auto baseState = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'_'>; });
+
+        static_assert (baseState != boost::hana::nothing, "No base state (internal error).");
+
+        return *baseState;
 }
 
 template <typename Ev, typename St, typename... Rs> ErasedStateBase<Ev> *processGetState (std::type_index const &ti, St &st, Rs &... rest)
 {
-        if (ti == std::type_index (typeid (st))) {
+        if (ti == std::type_index (typeid (st.name))) {
                 return &st;
         }
 
@@ -119,7 +124,7 @@ template <typename Ev, typename St, typename... Rs> ErasedStateBase<Ev> *process
         return nullptr;
 }
 
-template <typename Ev, typename S> auto Machine<Ev, S>::getState (std::type_index const &ti)
+template <typename Ev, typename S> auto Machine<Ev, S>::getState (std::type_index const &ti) -> ErasedStateBase<Ev> *
 {
         return boost::hana::unpack (states, [&ti] (auto &... sts) -> ErasedStateBase<Ev> * {
                 if constexpr (sizeof...(sts)) {
@@ -253,13 +258,20 @@ template <typename Ev, typename S> template <typename Q> void Machine<Ev, S>::ru
 #ifndef NDEBUG
         std::cout << "== Run ==" << std::endl;
 #endif
-        Expects (currentName);
+        // Expects (currentName);
         // std::type_index &currentStateNameCopy = *currentName;
 
         if (!currentState) {
+                // auto initialState = findInitialState ();
+
                 auto initialState = findInitialState ();
-                currentState = &initialState;
+
+                // TODO why this does not work!
+                // currentState = &initialState;
+
                 // std::cout << currentState->getTransitionSizeOf (0) << std::endl;
+                currentName = std::type_index (typeid (initialState.name));
+                currentState = getState (*currentName);
         }
 
         int i = 0;

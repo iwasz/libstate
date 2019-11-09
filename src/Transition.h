@@ -21,6 +21,11 @@ public:
         explicit Transition (Sn sn) : stateName (std::move (sn)) {}
         Transition (Sn sn, C c) : stateName (std::move (sn)), condition (std::move (c)) {}
         Transition (Sn sn, C c, T t) : stateName (std::move (sn)), condition (std::move (c)), actions (std::move (t)) {}
+        Transition (Transition const &t) : stateName (t.stateName), condition (t.condition), actions (t.actions) {}
+        Transition &operator= (Transition const &t) = default;
+        Transition (Transition &&t) noexcept = default;
+        Transition &operator= (Transition &&t) noexcept = default;
+        ~Transition () = default;
 
         template <typename Ev> Delay runActions (Ev const &ev) { return actions (ev); }
         void resetActions () { actions.reset (); }
@@ -81,7 +86,7 @@ template <typename Ev, typename Tr> struct ErasedTransition : public ErasedTrans
 
         explicit ErasedTransition (Tr tr) noexcept : internal (std::move (tr)) {}
         virtual ~ErasedTransition () noexcept = default;
-        ErasedTransition (ErasedTransition const &) noexcept = default;
+        ErasedTransition (ErasedTransition const &t) noexcept : internal (t.internal) {}
         ErasedTransition &operator= (ErasedTransition const &) noexcept = default;
         ErasedTransition (ErasedTransition &&) noexcept = default;
         ErasedTransition &operator= (ErasedTransition &&) noexcept = default;

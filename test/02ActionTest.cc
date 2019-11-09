@@ -33,39 +33,50 @@ TEST_CASE ("Check if all called", "[Action]")
 
         std::vector<std::string> results;
 
-        auto res = [&results] (std::string const &message) { return [&results, message] { results.push_back (message); }; };
+        // TODO this worked, and stoped to compile after introducing ErasedTransitions
+        // TODO it work again only because I explicitlu implemented copy constructors
+        auto res = [&results] (std::string const &message) { return [&results, message] () { results.push_back (message); }; };
+        // auto res = [&results] (std::string message) { return [&results, message] () { results.push_back (message); }; };
         auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
 
-        auto m = machine<int> (
-                state ("INIT"_STATE, entry (res ("INIT entry")), exit (res ("INIT exit")),
-                       transition ("B"_STATE, eq (2), res ("INIT->B action"))),
+        auto m = machine<int> (state ("INIT"_STATE, entry (res ("INIT entry")), exit (res ("INIT exit")),
+                                      transition ("B"_STATE, eq (2), res ("INIT->B action"))),
 
-                state ("B"_STATE, entry (res ("B entry")), exit (res ("B exit")),
-                       transition ("C"_STATE, eq (3), res ("B->C action1"), res ("B->C action2"))),
+                               state ("B"_STATE, entry (res ("B entry")), exit (res ("B exit")),
+                                      transition ("C"_STATE, eq (3), res ("B->C action1"), res ("B->C action2"))),
 
-                state ("C"_STATE, entry (res ("C entry")), exit (res ("C exit")), transition ("B"_STATE, eq (5), res ("C->B action")),
-                       transition ("FINAL"_STATE, eq (4), res ("C->FINAL action"))),
+                               state ("C"_STATE, entry (res ("C entry")), exit (res ("C exit")),
+                                      transition ("B"_STATE, eq (5), res ("C->B action")),
+                                      transition ("FINAL"_STATE, eq (4), res ("C->FINAL action"))),
 
-                state ("FINAL"_STATE, entry (res ("FINAL entry")))
+                               state ("FINAL"_STATE, entry (res ("FINAL entry")), exit (res (""))));
 
-        );
+        // auto res2 = [&results] (std::string const &message) { return [&results, message] () { results.emplace_back (message); }; };
+
+        // auto res3 = res2;
+
+        // auto p = res3 ("aaa");
+        // p ();
+        // auto n = machine<int> (state ("INIT"_STATE, entry ([] {}), exit ([] {}),
+        //                               transition (
+        //                                       "INIT"_STATE, [] (auto /* i */) { return true; }, res2 ("aaaa"))));
+
+        // n.run (std::deque<int>{2});
 
         // TODO this should be called with ampty queue, but it does not work, because checks are inside loop iterating over events.
         m.run (std::deque<int>{2});
-        REQUIRE (m.getCurrentStateName ());
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("INIT"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "INIT"s);
         REQUIRE (results.at (0) == "INIT entry");
 
         m.run (std::deque{2}); // State is successfully changed to "B"_STATE.
-        REQUIRE (m.getCurrentStateName ());
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "B"s);
         REQUIRE (results.at (1) == "INIT exit");
         REQUIRE (results.at (2) == "INIT->B action");
         REQUIRE (results.at (3) == "B entry");
         REQUIRE (results.size () == 4);
 
         m.run (std::deque{3});
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "C"s);
         REQUIRE (results.at (4) == "B exit");
         REQUIRE (results.at (5) == "B->C action1");
         REQUIRE (results.at (6) == "B->C action2");
@@ -73,14 +84,14 @@ TEST_CASE ("Check if all called", "[Action]")
         REQUIRE (results.size () == 8);
 
         m.run (std::deque{5});
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("B"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "B"s);
         REQUIRE (results.at (8) == "C exit");
         REQUIRE (results.at (9) == "C->B action");
         REQUIRE (results.at (10) == "B entry");
         REQUIRE (results.size () == 11);
 
         m.run (std::deque{3});
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("C"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "C"s);
         REQUIRE (results.at (11) == "B exit");
         REQUIRE (results.at (12) == "B->C action1");
         REQUIRE (results.at (13) == "B->C action2");
@@ -88,7 +99,7 @@ TEST_CASE ("Check if all called", "[Action]")
         REQUIRE (results.size () == 15);
 
         m.run (std::deque{4, 7}); // Transition condition is satisfied.
-        REQUIRE (*m.getCurrentStateName () == std::type_index (typeid ("FINAL"_STATE)));
+        REQUIRE (m.getCurrentStateName2 () == "FINAL"s);
         REQUIRE (results.at (15) == "C exit");
         REQUIRE (results.at (16) == "C->FINAL action");
         REQUIRE (results.at (17) == "FINAL entry");

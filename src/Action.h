@@ -141,6 +141,7 @@ template <> class ActionTuple<void> {
 public:
         ActionTuple () = default;
         template <typename Ev> void operator() (Ev const & /*event*/) {}
+        void reset () {}
 };
 
 template <typename T> struct Entry : public ActionTuple<T> {
