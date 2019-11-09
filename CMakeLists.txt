@@ -8,7 +8,7 @@ ADD_DEFINITIONS ("-DUNIT_TEST")
 
 SET (CATCH2_INCLUDE "deps/Catch2/single_include/catch2")
 INCLUDE_DIRECTORIES("${CATCH2_INCLUDE}")
-include_directories (deps/GSL/include)
+include_directories ("deps/GSL/include" "deps/etl/include") 
 
 INCLUDE_DIRECTORIES("src")
 INCLUDE_DIRECTORIES("test")

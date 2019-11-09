@@ -178,3 +178,10 @@ Time as Linux *time* command shows in *real* row. Binary size is in parentheses 
 | libstate Debug | Release       |
 | -------------- | ------------- |
 | 0,516s (15M)   | 0,107s (230K) |
+
+* libstate **a912e495e0d5e4ef1e16e130574c90ef5bbb0483**
+Now I'm averaging 10 runs of ```time ./benchmark```.
+
+| libstate Debug | Release       |
+| -------------- | ------------- |
+| 0,408s (6.1M)  | 0,100s (230K) |

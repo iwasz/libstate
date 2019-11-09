@@ -7,7 +7,8 @@
  ****************************************************************************/
 
 #include "StateMachine.h"
-#include <deque>
+// #include <deque>
+#include <etl/deque.h>
 
 int main ()
 {
@@ -81,8 +82,9 @@ int main ()
 
         );
 
-        m.run (std::deque{""}); // _->INIT
-        std::deque<std::string> evq;
+        //  std::deque<std::string> evq;
+        etl::deque<std::string, 16> evq;
+        m.run (evq); // _->INIT
 
         for (int i = 0; i < 10000; ++i) {
                 evq.push_back ("2");
