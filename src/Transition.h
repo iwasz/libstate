@@ -78,6 +78,7 @@ template <typename Ev> struct ErasedTransitionBase {
         virtual std::type_index getStateIndex () const = 0;
         virtual const char *getStateName () const = 0;
         virtual size_t getStateIdx () const = 0;
+        virtual size_t getStateIdx2 () const = 0;
 };
 
 /**
@@ -98,6 +99,7 @@ template <typename Ev, typename Tr> struct ErasedTransition : public ErasedTrans
         std::type_index getStateIndex () const override { return internal.getStateIndex (); }
         const char *getStateName () const override { return internal.getStateName (); }
         size_t getStateIdx () const override { return stateIdx; }
+        size_t getStateIdx2 () const override { return boost::hana::hash (internal.stateName); }
 
         Tr internal;
         size_t stateIdx{};
