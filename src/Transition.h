@@ -77,6 +77,7 @@ template <typename Ev> struct ErasedTransitionBase {
         virtual bool checkCondition (Ev const &ev) const = 0;
         virtual std::type_index getStateIndex () const = 0;
         virtual const char *getStateName () const = 0;
+        virtual size_t getStateIdx () const = 0;
 };
 
 /**
@@ -96,8 +97,10 @@ template <typename Ev, typename Tr> struct ErasedTransition : public ErasedTrans
         bool checkCondition (Ev const &ev) const override { return internal.checkCondition (ev); }
         std::type_index getStateIndex () const override { return internal.getStateIndex (); }
         const char *getStateName () const override { return internal.getStateName (); }
+        size_t getStateIdx () const override { return stateIdx; }
 
         Tr internal;
+        size_t stateIdx{};
 };
 
 template <typename Ev, typename Tr> auto erasedTransition (Tr tr) { return ErasedTransition<Ev, Tr> (std::move (tr)); }

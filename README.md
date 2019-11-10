@@ -185,3 +185,6 @@ Now I'm averaging 10 runs of ```time ./benchmark```.
 | libstate Debug | Release       |
 | -------------- | ------------- |
 | 0,408s (6.1M)  | 0,100s (230K) |
+
+
+355,7
