@@ -221,7 +221,7 @@ template <typename Ev, typename S> template <typename Q> void Machine<Ev, S>::ru
 #ifndef NDEBUG
                                 std::cout << "Transition to : " << trans->getStateName () << std::endl;
 #endif
-                                if (Delay d = currentState->runExitActions (event); d != Delay::zero ()) {
+                                if (Delay d = currentState->runExitActions (event); d != DELAY_ZERO) {
                                         std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count ()
                                                   << "ms" << std::endl;
 
@@ -229,7 +229,7 @@ template <typename Ev, typename S> template <typename Q> void Machine<Ev, S>::ru
                                         goto end;
                                 }
 
-                                if (Delay d = trans->runActions (event); d != Delay::zero ()) {
+                                if (Delay d = trans->runActions (event); d != DELAY_ZERO) {
                                         std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count ()
                                                   << "ms" << std::endl;
 

@@ -24,6 +24,8 @@ namespace ls {
 /// Common return type for simplicity.
 using Delay = std::chrono::nanoseconds;
 
+static auto DELAY_ZERO = Delay::zero ();
+
 template <typename> struct IsDuration : public std::false_type {
 };
 
@@ -44,7 +46,7 @@ public:
         template <typename... Arg> Delay operator() (Arg &&... a)
         {
                 if (!active) {
-                        return Delay::zero ();
+                        return DELAY_ZERO;
                 }
 
                 active = false;
@@ -58,7 +60,7 @@ public:
                                 static_assert (std::is_same_v<std::invoke_result_t<T, Arg...>, void>,
                                                "Wrong action return value. Use either std::chrono::duration <R, P> or void.");
                                 action (std::forward<Arg> (a)...);
-                                return Delay::zero ();
+                                return DELAY_ZERO;
                         }
                 }
                 else { // Action does not accept arguments
@@ -74,7 +76,7 @@ public:
                                 static_assert (std::is_same_v<std::invoke_result_t<T>, void>,
                                                "Wrong action return value. Use either std::chrono::duration <R, P> or void.");
                                 action (); // Doesn't either accept an arg or return.
-                                return Delay::zero ();
+                                return DELAY_ZERO;
                         }
                 }
         }
@@ -91,7 +93,7 @@ private:
 
 template <typename Ev, typename R, typename... Rr> Delay processActionRunners (Ev const &event, R &runner, Rr &... rest)
 {
-        if (Delay d = runner (event); d != Delay::zero ()) {
+        if (Delay d = runner (event); d != DELAY_ZERO) {
                 return d;
         }
 

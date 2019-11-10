@@ -10,6 +10,7 @@
 #include <chrono>
 
 namespace ls {
+
 /// TODO typesafe api, no uint32
 class Timer {
 public:
