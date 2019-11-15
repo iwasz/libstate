@@ -68,7 +68,7 @@ public:
         Delay runExitActions (Ev const &ev) override { return exit (ev); }
         void resetExitActions () override { exit.reset (); }
 
-        ErasedTransitionBase<Ev> *getTransition (size_t index) override;
+        ErasedTransitionBase<Ev> *getTransition (size_t index) override{auto &t = *transitions[]}
 
         // private:
         Sn name; // name, entry and exit has the same tyypes and values as in State object
@@ -80,38 +80,38 @@ public:
 /**
  *
  */
-template <typename Ev, typename T, typename... Rs>
-constexpr ErasedTransitionBase<Ev> *processGetTransition (size_t index, size_t current, T &transition, Rs &... rest)
-{
-        if (index == current) {
-                return &transition;
-        }
+// template <typename Ev, typename T, typename... Rs>
+// constexpr ErasedTransitionBase<Ev> *processGetTransition (size_t index, size_t current, T &transition, Rs &... rest)
+// {
+//         if (index == current) {
+//                 return &transition;
+//         }
 
-        if constexpr (sizeof...(rest)) {
-                return processGetTransition<Ev> (index, current + 1, rest...);
-        }
+//         if constexpr (sizeof...(rest)) {
+//                 return processGetTransition<Ev> (index, current + 1, rest...);
+//         }
 
-        return nullptr;
-}
+//         return nullptr;
+// }
 
-/**
- *
- */
-template <typename Ev, typename Sn, typename T1, typename T2, typename T3>
-ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t index)
-{
-        // TODO does not work, why can't I get the size from T3 type directly?
-        // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
-        return boost::hana::unpack (transitions, [index] (auto &... trans) -> ErasedTransitionBase<Ev> * {
-                if constexpr (sizeof...(trans) > 0) {
-                        return processGetTransition<Ev> (index, 0, trans...);
-                }
+// /**
+//  *
+//  */
+// template <typename Ev, typename Sn, typename T1, typename T2, typename T3>
+// ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t index)
+// {
+//         // TODO does not work, why can't I get the size from T3 type directly?
+//         // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
+//         return boost::hana::unpack (transitions, [index] (auto &... trans) -> ErasedTransitionBase<Ev> * {
+//                 if constexpr (sizeof...(trans) > 0) {
+//                         return processGetTransition<Ev> (index, 0, trans...);
+//                 }
 
-                return nullptr;
-        });
+//                 return nullptr;
+//         });
 
-        return nullptr; // TODO
-}
+//         return nullptr; // TODO
+// }
 
 /**
  *

@@ -37,3 +37,9 @@ ADD_EXECUTABLE (benchmarktest
 )
 
 target_compile_definitions(benchmarktest PRIVATE NDEBUG=1)
+
+ADD_EXECUTABLE (benchmarktest-int
+    "test/benchmarkInt.cc"
+)
+
+target_compile_definitions(benchmarktest-int PRIVATE NDEBUG=1)
