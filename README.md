@@ -189,8 +189,9 @@ Implementation 2 used type Erasure which made runtime polymorphic interface for 
 ## To try
 * Next thing to try is to optimize for executable size by changing indexToState impl and getTransition. Both methods use compile time iterations which I think is the main cause of binary bloat. 
 * Another thing I think of is to minimize number of templates i.e. now I have State, ErasedState and ErasedStateBase so instead of 1 template 3 are beeing instantiated (executable produced by 2nd implementation is more than twice the size of the 1st).
-  * Try private attribute.
-  * Try switching to std::tuple.
+  * [x] Try -fvisibility=hidden. Does not help, as it is to be used with libraries. Compiling a library GCC does not know which symbols has to be public or private, because they aren't used yet (by the final executable). Some of the symbols are pure implementation details of the library and thus should be marked hidden, and others are meant to be used by the end uuser and those should be visible. At the other hand when complilin a final executable GCC can fingure out which symbols are used, and which not at all, and thus it can potentially get rid of unused ones, so it make no difference is you use -fvisibility=hidden.
+  * [x] ```-fdata-sections -ffunction-sections -fno-unwind-tables``` and ```-Wl,--gc-sections``` . No impact on executable size whatsoever.
+  * [ ] Try switching to std::tuple.
 * Compile Error messages are my main concern now. They render this implementation next to unusable. This is ofcourse because the types are so long.
   * Try clang. 
   * Try some gcc switches.

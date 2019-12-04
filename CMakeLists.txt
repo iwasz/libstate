@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.15)
 PROJECT (libstate)
 SET (CMAKE_VERBOSE_MAKEFILE OFF)
 
-SET(CMAKE_CXX_FLAGS "-std=c++17 -Wall" CACHE INTERNAL "cxx compiler flags")
+SET(CMAKE_CXX_FLAGS "-std=c++17 -Wall -fdata-sections -ffunction-sections -fno-unwind-tables" CACHE INTERNAL "cxx compiler flags")
+SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--gc-sections" CACHE INTERNAL "exe link flags")
 ADD_DEFINITIONS ("-DUNIT_TEST")
 
 SET (CATCH2_INCLUDE "deps/Catch2/single_include/catch2")
