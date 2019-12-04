@@ -142,7 +142,7 @@ private:
 template <> class ActionTuple<void> {
 public:
         ActionTuple () = default;
-        template <typename Ev> void operator() (Ev const & /*event*/) {}
+        template <typename Ev> Delay operator() (Ev const & /*event*/) { return Delay{}; }
         void reset () {}
 };
 

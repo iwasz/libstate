@@ -49,6 +49,8 @@ template <typename Ev> struct ErasedStateBase {
 template <typename Ev, typename Sn, typename T1 = void, typename T2 = void, typename Tw = boost::hana::tuple<>>
 class ErasedState : public ErasedStateBase<Ev> {
 public:
+        ErasedState (Sn sn) : name (std::move (sn)) {}
+
         // explicit ErasedState (State<Sn, T1, T2, T3> &s) : name (std::move (s.name)), entry (std::move (s.entry)), exit (std::move (s.exit)) {}
         ErasedState (Sn sn, Entry<T1> en, Exit<T2> ex, Tw ts)
             : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))

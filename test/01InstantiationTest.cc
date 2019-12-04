@@ -143,3 +143,13 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         m.run (std::deque{4, 7}); // Transition condition is satisfied.
         REQUIRE (m.getCurrentStateName2 () == "FINAL"s);
 }
+
+/**
+ * Machine2 instance and a few features tested.
+ */
+TEST_CASE ("Machine2 instance", "[Instantiation]")
+{
+
+        Machine2<int> m{};
+        m.state ("A"_STATE);
+}

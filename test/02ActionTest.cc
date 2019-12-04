@@ -1,3 +1,4 @@
+#if 0
 /****************************************************************************
  *                                                                          *
  *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
@@ -105,3 +106,4 @@ TEST_CASE ("Check if all called", "[Action]")
         REQUIRE (results.at (17) == "FINAL entry");
         REQUIRE (results.size () == 18);
 }
+#endif

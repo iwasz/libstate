@@ -11,10 +11,12 @@
 #include "Misc.h"
 #include "State.h"
 #include "Transition.h"
+#include "gsl/pointers"
 #include <boost/hana.hpp>
 #include <boost/hana/fwd/for_each.hpp>
 #include <chrono>
 #include <cstddef>
+#include <etl/map.h>
 #include <gsl/gsl>
 #include <optional>
 #include <pthread.h>
@@ -25,8 +27,34 @@
 #include <string>
 // TODO remove
 #include <iostream>
+#include <utility>
 
 namespace ls {
+
+struct HeapAllocator {
+
+        template <typename Ev, typename... Arg> gsl::owner<ErasedStateBase<Ev> *> allocateState (Arg &&... arg)
+        {
+                return new ErasedState<Ev, Arg...> (std::forward<Arg> (arg)...);
+        }
+
+        template <typename Ev> void deallocateState (gsl::owner<ErasedStateBase<Ev> *> state) { delete state; }
+};
+
+template <typename Ev, typename Allocator = HeapAllocator> class Machine2 {
+public:
+        /**
+         * Adds a state.
+         */
+        template <typename... Arg> void state (Arg &&... args) { auto s = allocator.template allocateState<Ev> (std::forward<Arg> (args)...); }
+
+private:
+        Allocator allocator;
+};
+
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
 
 /**
  *
@@ -73,8 +101,8 @@ private:
         ErasedStateBase<Ev> *findState (std::type_index const &stateIndex) {}
 
 private:
-        S states;                                     /// boost::hana::tuple of States. TODO hana map
-        std::optional<std::type_index> currentName{}; /// Current state name. // TODO use type_index
+        S states;
+        std::optional<std::type_index> currentName{};
         ErasedStateBase<Ev> *currentState{};
         ErasedStateBase<Ev> *prevState{};
         Timer timer{};

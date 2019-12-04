@@ -182,7 +182,7 @@ Now I'm averaging 10 runs of ```time ./benchmark```.
    3. Fast execution.
    4. Fast compilation.
    5. Not too much function nesting for ease of debugging on a µC.
-1. **Fix all the problems of the older version**. Most notably : allow for arbitrary event types, and event collection types without having to state them explicitly in every state, transition, action, condition etc. Arbitrary functions / function-objects etc. for actions.
+1. **Fix all the problems of the older version** (which piled up). Most notably : allow for arbitrary event types, and event collection types without having to state them explicitly in every state, transition, action, condition etc. Arbitrary functions / function-objects etc. for actions.
 
 ## Previous implementation (old)
 Like I mentioned above, every piece of configuration was created on the heap. Initially the *event* type was fixed to character string, and was not easily replaceable. This soon has proven to be a flaw as I needed to support binary data (I was dealing with modems at that time). At the end a typical configuration looked like that:
