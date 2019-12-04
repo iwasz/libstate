@@ -41,15 +41,43 @@ struct HeapAllocator {
         template <typename Ev> void deallocateState (gsl::owner<ErasedStateBase<Ev> *> state) { delete state; }
 };
 
-template <typename Ev, typename Allocator = HeapAllocator> class Machine2 {
+template <size_t SZ> class StackAllocator {
+public:
+        template <typename Ev, typename... Arg> gsl::owner<ErasedStateBase<Ev> *> allocateState (Arg &&... arg)
+        {
+                using ThisState = ErasedState<Ev, Arg...>;
+                auto sz = sizeof (ThisState);
+                Expects (std::next (end, sz) <= block.end ());
+                gsl::owner<ThisState *> p = new ((void *)(end)) ThisState (std::forward<Arg> (arg)...);
+                end += sz;
+                return p;
+        }
+
+        size_t size () /* const */ { return std::distance (block.begin (), end); }
+
+private:
+        using Block = std::array<uint8_t, SZ>;
+        Block block{};
+        typename Block::iterator end{block.begin ()};
+};
+
+template <typename Ev, typename Allocator = HeapAllocator, size_t MAX_STATES = 10> class Machine2 {
 public:
         /**
          * Adds a state.
          */
-        template <typename... Arg> void state (Arg &&... args) { auto s = allocator.template allocateState<Ev> (std::forward<Arg> (args)...); }
+        template <typename... Arg> void state (Arg &&... args)
+        {
+                Expects (!states.full ());
+                auto s = allocator.template allocateState<Ev> (std::forward<Arg> (args)...);
+                states[s->getKey ()] = s;
+        }
 
 private:
         Allocator allocator;
+
+        using StateMap = etl::map<std::type_index, ErasedStateBase<Ev> *, MAX_STATES>;
+        StateMap states;
 };
 
 /****************************************************************************/

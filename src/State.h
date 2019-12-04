@@ -32,6 +32,7 @@ template <typename Ev> struct ErasedStateBase {
         ErasedStateBase &operator= (ErasedStateBase &&e) noexcept = default;
 
         virtual const char *getName () const = 0;
+        virtual std::type_index getKey () const = 0;
 
         virtual Delay runEntryActions (Ev const &ev) = 0;
         virtual void resetEntryActions () = 0;
@@ -61,8 +62,10 @@ public:
         ErasedState &operator= (ErasedState const &e) = default;
         ErasedState (ErasedState &&e) noexcept = default;
         ErasedState &operator= (ErasedState &&e) noexcept = default;
+        ~ErasedState () = default;
 
         const char *getName () const override { return name.c_str (); }
+        virtual std::type_index getKey () const { return std::type_index{typeid (name)}; }
 
         Delay runEntryActions (Ev const &ev) override { return entry (ev); }
         void resetEntryActions () override { entry.reset (); }

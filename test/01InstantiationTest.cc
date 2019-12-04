@@ -149,7 +149,9 @@ TEST_CASE ("Machine instance", "[Instantiation]")
  */
 TEST_CASE ("Machine2 instance", "[Instantiation]")
 {
-
         Machine2<int> m{};
         m.state ("A"_STATE);
+
+        Machine2<int, StackAllocator<1024>> m2{};
+        m2.state ("A"_STATE);
 }
