@@ -174,17 +174,39 @@ Now I'm averaging 10 runs of ```time ./benchmark```.
 | 0,356s (23M)   | **0,084s** (462K) |
 
 # Motivation, goals
-1. Avoid a situation where dynamically allocated (using new) structure of object composed together is created (like in the old version). 
-2. Fix all the problems from the older version, most notably : allow for arbitrary event types, and event collection types without having 
-to state them explicitly in every state, transition, action, condition etc.
-3. To have a small (in all possible meanings of this word i.e. executable size, code size, code needed to initialize the thing etc.) and fast implementation that encourages a user to throw a state machine wenever he fancy (in few lines of his code).
+1. **Versatile API**. Expressive, compact definition in one place. No class-per-state approach.
+1. **Avoid dynamic allocation**. This is to be used in µCs by potential users. I don't want to force anybody to use a heap in a µC if they don't want to. In the old version the while configuration was constructed on the heap. This configuration does not change during program runtime. The only reason for the heap usage was to construct runtime polymorphic object structure. 
+1. **Lightweight**. To have a small (in all possible meanings of this word i.e. executable size, code size, code needed to initialize the thing etc.) and fast implementation that encourages a user to throw a state machine wenever he fancy (in few lines of his code).
+   1. Small RAM footprint
+   2. Small flash footprint.
+   3. Fast execution.
+   4. Fast compilation.
+   5. Not too much function nesting for ease of debugging on a µC.
+1. **Fix all the problems of the older version**. Most notably : allow for arbitrary event types, and event collection types without having to state them explicitly in every state, transition, action, condition etc. Arbitrary functions / function-objects etc. for actions.
 
+## Previous implementation (old)
+Like I mentioned above, every piece of configuration was created on the heap. Initially the *event* type was fixed to character string, and was not easily replaceable. This soon has proven to be a flaw as I needed to support binary data (I was dealing with modems at that time). At the end a typical configuration looked like that:
 
-## First implementation
+```c++
+m->state (AT_QBTPWR)->entry (at ("AT+QBTPWR=1\r\n"))
+        ->transition (AT_QBTVISB)->when (anded<BinaryEvent> (beginsWith<BinaryEvent> ("AT+QBTPWR"), &ok))->then (&delay);
+
+m->state (AT_QBTVISB)->entry (at ("AT+QBTVISB=0\r\n"))
+        ->transition (AT_QBTGATSREG)->when (anded<BinaryEvent> (beginsWith<BinaryEvent> ("AT+QBTVISB"), &ok))->then (&delay);
+
+m->state (AT_QBTGATSREG)->entry (at ("AT+QBTGATSREG=1,\"ABC2\"\r\n"))
+        ->transition (AT_QBTGATSL)->when (anded<BinaryEvent> (beginsWith<BinaryEvent> ("AT+QBTGATSREG"), &ok))->then (&delay)
+        ->transition (PIN_STATUS_CHECK)->when (beginsWith<BinaryEvent> ("+CME ERROR:"));
+```
+
+## First attepmpt (new)
 Both state collection and the algorithm was template generated i.e. all the states and their internals were hana::tuples. Compile time iteration over compile time collections was implemented. Implication is that I couldn't store intermediate results between ```Machine::run``` calls because I would never know what is it's type (i.e. current state type). The way it worked in case of a delay action is it had to find the current state at the beginning of every run method call. So the drawback was : executable was big, and ran slower than the old version because the current state had to be found every time the ```Machine::run``` was run even though it was found in the previous run.
 
-## Second implementation
+## Second attempt
 Implementation 2 used type Erasure which made runtime polymorphic interface for state and transition and thus made storing a pointer (to a base class) to them possible. This made it significantly faster but executable size is even bigger than before (presumably because of new templates ErasedState and ErasedTransition).
+
+## Third attept
+Mix of 3 approaches from above. Most notably states are created on prealocated memowry block using placement new (as the most meory hungry objects which hold everything). 
 
 ## To try
 * Next thing to try is to optimize for executable size by changing indexToState impl and getTransition. Both methods use compile time iterations which I think is the main cause of binary bloat. 
