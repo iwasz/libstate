@@ -42,12 +42,14 @@ struct HeapAllocator {
                 return new ErasedState<Ev, St> (std::forward<St> (st));
         }
 
-        template <typename Ev, typename St, typename Ent> gsl::owner<ErasedStateBase<Ev> *> state (St &&st, Ent &&en)
+        template <typename Ev, typename St, typename Ent, typename = std::enable_if_t<is_entry_v<Ent>>>
+        gsl::owner<ErasedStateBase<Ev> *> state (St &&st, Ent &&en)
         {
                 return new ErasedState<Ev, St, Ent> (std::forward<St> (st), std::forward<Ent> (en));
         }
 
-        template <typename Ev, typename St, typename Ent, typename... Tra, typename = std::enable_if_t<is_entry_v<Ent>>>
+        template <typename Ev, typename St, typename Ent, typename... Tra,
+                  typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>...>>>
         gsl::owner<ErasedStateBase<Ev> *> state (St &&st, Ent &&en, Tra *... tra)
         {
                 return new ErasedState<Ev, St, Ent> (std::forward<St> (st), std::forward<Ent> (en), tra...);

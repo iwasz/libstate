@@ -44,23 +44,6 @@ template <typename Ev> struct ErasedStateBase {
         // virtual ErasedTransitionBase<Ev> *getTransition (size_t index) = 0;
 };
 
-#if 0
-template <typename Ev, typename Sn, typename En, typename Ex = std::void_t<>> struct Sssn {
-
-        template <typename Ent, typename = std::enable_if_t<is_entry_v<Ent>>> Sssn (Ent &&en) {}
-
-        template <typename Ent, typename... Tra, typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>...>>>
-        Sssn (Ent &&en, Tra *... tra)
-        {
-        }
-
-        template <typename Ent, typename Exi, typename... Tra,
-                  typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>..., is_exit<Exi>>>>
-        Sssn (Ent &&en, Exi &&ex, Tra *... tra)
-        {
-        }
-};
-#endif
 /**
  *
  */
@@ -68,20 +51,10 @@ template <typename Ev, typename Sn, typename T1 = ActionTuple<void>, typename T2
 class ErasedState : public ErasedStateBase<Ev> {
 public:
         explicit ErasedState (Sn sn) : name (std::move (sn)) {}
-
-        template <typename Ent, typename = std::enable_if_t<is_entry_v<Ent>>>
-        ErasedState (Sn sn, Ent en) : name (std::move (sn)), entryTuple (std::move (en))
-        {
-        }
-
-        template <typename Ent, typename... Tra, typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>...>>>
-        ErasedState (Sn sn, Ent en, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en))
-        {
-        }
-
-        template <typename Ent, typename Exi, typename... Tra,
-                  typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>..., is_exit<Exi>>>>
-        ErasedState (Sn sn, Ent en, Exi ex, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en)), exitTuple (std::move (ex))
+        ErasedState (Sn sn, T1 en) : name (std::move (sn)), entryTuple (std::move (en)) {}
+        template <typename... Tra> ErasedState (Sn sn, T1 en, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en)) {}
+        template <typename... Tra>
+        ErasedState (Sn sn, T1 en, T2 ex, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en)), exitTuple (std::move (ex))
         {
         }
 
