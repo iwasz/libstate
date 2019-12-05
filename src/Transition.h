@@ -30,7 +30,8 @@ template <typename Ev> struct ErasedTransitionBase {
         virtual bool checkCondition (Ev const &ev) const = 0;
         virtual std::type_index getStateIndex () const = 0;
         virtual const char *getStateName () const = 0;
-        // virtual size_t getStateIdx () const = 0;
+
+        ErasedTransitionBase *next{};
 };
 
 struct Condition {

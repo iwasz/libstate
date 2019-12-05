@@ -109,24 +109,116 @@ private:
 
 template <typename Ev, typename Allocator = HeapAllocator, size_t MAX_STATES = 10> class Machine2 {
 public:
+        template <typename Q> void run (Q &&queue);
+        template <typename Q> void waitAndRun (Q &&queue)
+        {
+                while (isWaiting ()) {
+                }
+                run (std::forward<Q> (queue));
+        }
+        bool isWaiting () const { return !timer.isExpired (); }
+
         /**
          * Adds a state.
          */
-        template <typename... Arg> void state (Arg &&... args)
+        template <typename... Arg> auto state (Arg &&... args)
         {
                 Expects (!states.full ());
                 auto s = allocator.template state<Ev> (std::forward<Arg> (args)...);
                 states[s->getKey ()] = s;
+
+                if (!initialState) {
+                        initialState = s;
+                }
+
+                return s;
         }
 
         template <typename... Arg> auto transition (Arg &&... arg) { return allocator.template transition<Ev> (std::forward<Arg> (arg)...); }
 
 private:
-        Allocator allocator;
+        auto findInitialState ()
+        {
+                // auto i = states.find (std::type_index (typeid ("INIT"_STATE)));
+                // Ensures (i != states.cend ());
+                // return i->second;
+                Ensures (initialState);
+                return initialState;
+        }
 
+private:
+        Allocator allocator;
         using StateMap = etl::map<std::type_index, ErasedStateBase<Ev> *, MAX_STATES>;
         StateMap states;
+        Timer timer{};
+        ErasedStateBase<Ev> *initialState{};
+        ErasedStateBase<Ev> *currentState{};
+        ErasedStateBase<Ev> *prevState{};
 };
+
+/****************************************************************************/
+
+template <typename Ev, typename Allocator, size_t MAX_STATES>
+template <typename Q>
+void Machine2<Ev, Allocator, MAX_STATES>::run (Q &&eventQueue)
+{
+
+        if (!timer.isExpired ()) {
+                return;
+        }
+
+#ifndef NDEBUG
+        std::cout << "== Run ==" << std::endl;
+#endif
+
+        if (!currentState) {
+                currentState = findInitialState ();
+        }
+
+#if 1
+        for (ErasedTransitionBase<Ev> *trans = currentState->getTransition (); trans != nullptr; trans = trans->next) {
+                for (auto const &event : eventQueue) {
+                        if (!trans->checkCondition (event)) {
+                                continue;
+                        }
+#ifndef NDEBUG
+                        std::cout << "Transition to : " << trans->getStateName () << std::endl;
+#endif
+                        if (Delay d = currentState->runExitActions (event); d != DELAY_ZERO) {
+                                std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
+                                          << std::endl;
+
+                                timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
+                                goto end;
+                        }
+
+                        if (Delay d = trans->runActions (event); d != DELAY_ZERO) {
+                                std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
+                                          << std::endl;
+
+                                timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
+                                goto end;
+                        }
+
+                        prevState = currentState;
+                        currentState = states.at (trans->getStateIndex ());
+                        Ensures (currentState);
+
+                        currentState->runEntryActions (event);
+                        eventQueue.clear (); // TODO not quite like that
+
+                        if (prevState) {
+                                prevState->resetExitActions ();
+                        }
+
+                        trans->resetActions ();
+                        currentState->resetEntryActions ();
+                }
+        }
+
+end:;
+#endif
+}
 
 /****************************************************************************/
 /****************************************************************************/

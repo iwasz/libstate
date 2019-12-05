@@ -10,7 +10,7 @@
 
 # TODOs
 * [ ] Return neneric std::duration instead aof a std::chrono::nanoseconds
-* [ ] error when adding entry to exit.
+* [ ] There should be an error when adding exit to entry like that : ```entry ([] {}, exit ([] {}))```. This is obviously a mistake.
 * [ ] When wrappers are sorted out, pay attention to function / method / lambda argument types (&, &&, universal && etc).
 * [ ] state function should accept parameters in different order (more logical order) : exit, then  transitions, then exit. This is because
   exit action is only needed IF and only if there is at least one transition, but trnsitions can exist WITHOUT an exit action.

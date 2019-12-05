@@ -153,9 +153,9 @@ TEST_CASE ("Machine instance", "[Instantiation]")
  */
 TEST_CASE ("Machine2 heap stack", "[Instantiation]")
 {
-        ErasedTransitionBase<int> *p1{};
 
         Machine2<int> m{};
+        ErasedTransitionBase<int> *p1 = m.transition ("A"_STATE);
 
         // Possible arguments passed when creating new state
         m.state ("A"_STATE);
@@ -180,6 +180,10 @@ TEST_CASE ("Machine2 heap stack", "[Instantiation]")
                  m.transition (
                          "B"_STATE, [] { return true; }, [] () { return Delay{}; }));
 
+        auto s = m.state ("C"_STATE, entry ([] {}), m.transition ("X"_STATE), m.transition ("Y"_STATE), m.transition ("Z"_STATE));
+
+        std::cout << sizeof (*s) << std::endl;
+
         // Machine2<int, StackAllocator<1024>> m2{};
         // m2.state ("A"_STATE);
         // // m2.state ("B"_STATE, entry ([] (auto const &i) { std::cout << i << std::endl; }));
@@ -193,4 +197,17 @@ TEST_CASE ("Machine2 heap stack", "[Instantiation]")
         // auto s2 = sssn (entry ([] {}), p1);
         // auto s3 = sssn (entry ([] {}), p1, p1, p1, p1);
         // auto s4 = sssn (entry ([] {}), exit ([] {}), p1, p1, p1, p1);
+}
+
+TEST_CASE ("First run", "[instantiation]")
+{
+        Machine2<int> m;
+        m.state ("A"_STATE, entry ([] {}), exit ([] {}), m.transition ("B"_STATE, [] { return true; }));
+        m.state ("B"_STATE, entry ([] {}), exit ([] {}), m.transition ("C"_STATE, [] { return true; }));
+        m.state ("C"_STATE, entry ([] {}));
+
+        m.run (std::deque{1});
+        m.run (std::deque{1});
+        m.run (std::deque{1});
+        m.run (std::deque{1});
 }

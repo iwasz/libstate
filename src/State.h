@@ -34,28 +34,33 @@ template <typename Ev> struct ErasedStateBase {
         virtual const char *getName () const = 0;
         virtual std::type_index getKey () const = 0;
 
-        // virtual Delay runEntryActions (Ev const &ev) = 0;
-        // virtual void resetEntryActions () = 0;
+        virtual Delay runEntryActions (Ev const &ev) = 0;
+        virtual void resetEntryActions () = 0;
 
-        // virtual Delay runExitActions (Ev const &ev) = 0;
-        // virtual void resetExitActions () = 0;
+        virtual Delay runExitActions (Ev const &ev) = 0;
+        virtual void resetExitActions () = 0;
 
-        // // TODO maybe return const and make method const and then change ErasedTransition interface to permit reset on const object and...
-        // virtual ErasedTransitionBase<Ev> *getTransition (size_t index) = 0;
+        // TODO maybe return const and make method const and then change ErasedTransition interface to permit reset on const object and...
+        virtual ErasedTransitionBase<Ev> *getTransition () = 0;
 };
 
 /**
  *
  */
-template <typename Ev, typename Sn, typename T1 = ActionTuple<void>, typename T2 = ActionTuple<void>, typename Tw = boost::hana::tuple<>>
+template <typename Ev, typename Sn, typename Ent = ActionTuple<void>, typename Exi = ActionTuple<void>>
 class ErasedState : public ErasedStateBase<Ev> {
 public:
         explicit ErasedState (Sn sn) : name (std::move (sn)) {}
-        ErasedState (Sn sn, T1 en) : name (std::move (sn)), entryTuple (std::move (en)) {}
-        template <typename... Tra> ErasedState (Sn sn, T1 en, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en)) {}
-        template <typename... Tra>
-        ErasedState (Sn sn, T1 en, T2 ex, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en)), exitTuple (std::move (ex))
+        ErasedState (Sn sn, Ent en) : name (std::move (sn)), entryTuple (std::move (en)) {}
+        template <typename... Tra> ErasedState (Sn sn, Ent en, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en))
         {
+                setTransitions (&transition, tra...);
+        }
+
+        template <typename... Tra>
+        ErasedState (Sn sn, Ent en, Exi ex, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en)), exitTuple (std::move (ex))
+        {
+                setTransitions (&transition, tra...);
         }
 
         ErasedState (ErasedState const &e) = default;
@@ -67,19 +72,35 @@ public:
         const char *getName () const override { return name.c_str (); }
         virtual std::type_index getKey () const { return std::type_index{typeid (name)}; }
 
-        // Delay runEntryActions (Ev const &ev) override { return entryTuple (ev); }
-        // void resetEntryActions () override { entryTuple.reset (); }
+        Delay runEntryActions (Ev const &ev) override { return entryTuple (ev); }
+        void resetEntryActions () override { entryTuple.reset (); }
 
-        // Delay runExitActions (Ev const &ev) override { return exitTuple (ev); }
-        // void resetExitActions () override { exitTuple.reset (); }
+        Delay runExitActions (Ev const &ev) override { return exitTuple (ev); }
+        void resetExitActions () override { exitTuple.reset (); }
 
-        // ErasedTransitionBase<Ev> *getTransition (size_t index) override;
+        ErasedTransitionBase<Ev> *getTransition () override { return transition; }
 
-        // private:
-        Sn name; // name, entry and exit has the same tyypes and values as in State object
-        T1 entryTuple;
-        T2 exitTuple;
-        Tw transitions; // transitions at the other hand are wrapped in ErasedTransition <Ev>
+private:
+        template <typename Tr, typename... Rs> void setTransitions (ErasedTransitionBase<Ev> **current, Tr *tr, Rs *... rs)
+        {
+                if (*current == nullptr) {
+                        *current = tr;
+                }
+                else {
+                        (*current)->next = tr;
+                }
+
+                current = &(*current)->next;
+                if constexpr (sizeof...(rs)) {
+                        setTransitions (current, rs...);
+                }
+        }
+
+private:
+        Sn name;
+        Ent entryTuple;
+        Exi exitTuple;
+        ErasedTransitionBase<Ev> *transition{};
 };
 
 #if 0
@@ -122,11 +143,11 @@ ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t
 /**
  *
  */
-template <typename Ev, typename Sn, typename T1, typename T2, typename T3>
-ErasedState<Ev, Sn, T1, T2, T3> erasedState (Sn sn, Entry<T1> en, Exit<T2> ex, T3 ts)
-{
-        return ErasedState<Ev, Sn, T1, T2, T3> (std::move (sn), std::move (en), std::move (ex), std::move (ts));
-}
+// template <typename Ev, typename Sn, typename T1, typename T2, typename T3>
+// ErasedState<Ev, Sn, T1, T2, T3> erasedState (Sn sn, Entry<T1> en, Exit<T2> ex, T3 ts)
+// {
+//         return ErasedState<Ev, Sn, T1, T2, T3> (std::move (sn), std::move (en), std::move (ex), std::move (ts));
+// }
 
 /**
  * A state - typesafe version. This is only a "type container" which is used to make
@@ -151,7 +172,7 @@ public:
         //     //return ErasedState <Ev> (std:move (name), std::move (entry), std::move (exit));
         // }
 
-        // private:
+private:
         Sn name;
         Entry<En> entry;
         Exit<Ex> exit;
