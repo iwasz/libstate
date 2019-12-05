@@ -31,16 +31,62 @@
 
 namespace ls {
 
+/**
+ *
+ */
 struct HeapAllocator {
 
-        template <typename Ev, typename... Arg> gsl::owner<ErasedStateBase<Ev> *> allocateState (Arg &&... arg)
+        // TODO try to understand why I had to overload state instead of perfect forwarding all parameters at once
+        template <typename Ev, typename St> gsl::owner<ErasedStateBase<Ev> *> state (St &&st)
         {
-                return new ErasedState<Ev, Arg...> (std::forward<Arg> (arg)...);
+                return new ErasedState<Ev, St> (std::forward<St> (st));
         }
 
-        template <typename Ev> void deallocateState (gsl::owner<ErasedStateBase<Ev> *> state) { delete state; }
+        template <typename Ev, typename St, typename Ent> gsl::owner<ErasedStateBase<Ev> *> state (St &&st, Ent &&en)
+        {
+                return new ErasedState<Ev, St, Ent> (std::forward<St> (st), std::forward<Ent> (en));
+        }
+
+        template <typename Ev, typename St, typename Ent, typename... Tra, typename = std::enable_if_t<is_entry_v<Ent>>>
+        gsl::owner<ErasedStateBase<Ev> *> state (St &&st, Ent &&en, Tra *... tra)
+        {
+                return new ErasedState<Ev, St, Ent> (std::forward<St> (st), std::forward<Ent> (en), tra...);
+        }
+
+        template <typename Ev, typename St, typename Ent, typename Exi, typename... Tra,
+                  typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_exit<Exi>>>>
+        gsl::owner<ErasedStateBase<Ev> *> state (St &&st, Ent &&en, Exi &&ex, Tra *... tra)
+        {
+                return new ErasedState<Ev, St, Ent, Exi> (std::forward<St> (st), std::forward<Ent> (en), std::forward<Exi> (ex), tra...);
+        }
+
+        /*--------------------------------------------------------------------------*/
+
+        template <typename Ev, typename St> gsl::owner<ErasedTransitionBase<Ev> *> transition (St &&st)
+        {
+                return new Transition<Ev, St> (std::forward<St> (st));
+        }
+
+        template <typename Ev, typename St, typename Con> gsl::owner<ErasedTransitionBase<Ev> *> transition (St &&st, Con &&con)
+        {
+                return new Transition<Ev, St, Con> (std::forward<St> (st), std::forward<Con> (con));
+        }
+
+        template <typename Ev, typename St, typename Con, typename... Tts>
+        gsl::owner<ErasedTransitionBase<Ev> *> transition (St &&st, Con &&con, Tts &&... tts)
+        {
+                return new Transition<Ev, St, Con, decltype (transitionAction (std::forward<Tts> (tts)...))> (
+                        std::forward<St> (st), std::forward<Con> (con), transitionAction (std::forward<Tts> (tts)...));
+        }
+
+        /*--------------------------------------------------------------------------*/
+
+        template <typename Ev> void destroy (gsl::owner<ErasedStateBase<Ev> *> state) { delete state; }
 };
 
+/**
+ *
+ */
 template <size_t SZ> class StackAllocator {
 public:
         template <typename Ev, typename... Arg> gsl::owner<ErasedStateBase<Ev> *> allocateState (Arg &&... arg)
@@ -52,8 +98,6 @@ public:
                 end += sz;
                 return p;
         }
-
-        size_t size () /* const */ { return std::distance (block.begin (), end); }
 
 private:
         using Block = std::array<uint8_t, SZ>;
@@ -69,9 +113,11 @@ public:
         template <typename... Arg> void state (Arg &&... args)
         {
                 Expects (!states.full ());
-                auto s = allocator.template allocateState<Ev> (std::forward<Arg> (args)...);
+                auto s = allocator.template state<Ev> (std::forward<Arg> (args)...);
                 states[s->getKey ()] = s;
         }
+
+        template <typename... Arg> auto transition (Arg &&... arg) { return allocator.template transition<Ev> (std::forward<Arg> (arg)...); }
 
 private:
         Allocator allocator;
@@ -139,15 +185,16 @@ private:
 /*--------------------------------------------------------------------------*/
 
 /// Helper for creating a machine.
-template <typename Ev, typename... Sts> auto machine (Sts &&... states)
-{
-        auto s = boost::hana::make_tuple (
-                erasedState<Ev> ("_"_STATE, entry ([] {}), exit ([] {}),
-                                 erasedTransitions<Ev> (boost::hana::make_tuple (transition ("INIT"_STATE, [] (auto /*ev*/) { return true; })))),
-                erasedState<Ev> (states.name, states.entry, states.exit, erasedTransitions<Ev> (states.transitions))...);
+// template <typename Ev, typename... Sts> auto machine (Sts &&... states)
+// {
+//         auto s = boost::hana::make_tuple (
+//                 erasedState<Ev> ("_"_STATE, entry ([] {}), exit ([] {}),
+//                                  erasedTransitions<Ev> (boost::hana::make_tuple (transition ("INIT"_STATE, [] (auto /*ev*/) { return true;
+//                                  })))),
+//                 erasedState<Ev> (states.name, states.entry, states.exit, erasedTransitions<Ev> (states.transitions))...);
 
-        return Machine<Ev, decltype (s)> (std::move (s));
-}
+//         return Machine<Ev, decltype (s)> (std::move (s));
+// }
 
 /****************************************************************************/
 

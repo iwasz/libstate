@@ -169,4 +169,22 @@ template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry,
 template <typename... Ar> auto exit (Ar &&... args) { return actionTuple<Exit, Ar...> (std::forward<Ar> (args)...); }
 template <typename... Ar> auto transitionAction (Ar &&... args) { return actionTuple<TransitionAction, Ar...> (std::forward<Ar> (args)...); }
 
+/****************************************************************************/
+
+template <typename T> struct is_entry : public std::false_type {
+};
+
+template <typename In> struct is_entry<Entry<In>> : public std::true_type {
+};
+
+template <typename T> constexpr bool is_entry_v = is_entry<T>::value;
+
+template <typename T> struct is_exit : public std::false_type {
+};
+
+template <typename In> struct is_exit<Exit<In>> : public std::true_type {
+};
+
+template <typename T> constexpr bool is_exit_v = is_exit<T>::value;
+
 } // namespace ls

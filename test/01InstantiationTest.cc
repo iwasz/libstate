@@ -8,6 +8,7 @@
 
 #include "Action.h"
 #include "StateMachine.h"
+#include "Transition.h"
 #include "Utils.h"
 #include "catch.hpp"
 #include <chrono>
@@ -18,7 +19,6 @@
 #include <unistd.h>
 
 /****************************************************************************/
-
 namespace hana = boost::hana;
 using namespace hana::literals;
 using namespace std::string_literals;
@@ -26,6 +26,7 @@ using namespace std::chrono_literals;
 using namespace ls;
 
 /****************************************************************************/
+#if 0
 
 template <typename T> void actionFunctionTemplate (T &&event) { std::cout << "actionFunctionTemplate (" << event << ")" << std::endl; }
 
@@ -143,15 +144,53 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         m.run (std::deque{4, 7}); // Transition condition is satisfied.
         REQUIRE (m.getCurrentStateName2 () == "FINAL"s);
 }
+#endif
+
+/*--------------------------------------------------------------------------*/
 
 /**
  * Machine2 instance and a few features tested.
  */
-TEST_CASE ("Machine2 instance", "[Instantiation]")
+TEST_CASE ("Machine2 heap stack", "[Instantiation]")
 {
-        Machine2<int> m{};
-        m.state ("A"_STATE);
+        ErasedTransitionBase<int> *p1{};
 
-        Machine2<int, StackAllocator<1024>> m2{};
-        m2.state ("A"_STATE);
+        Machine2<int> m{};
+
+        // Possible arguments passed when creating new state
+        m.state ("A"_STATE);
+        m.state ("A"_STATE, entry ([] {}));
+        m.state ("A"_STATE, entry ([] {}), p1, p1, p1, p1);
+        m.state ("A"_STATE, entry ([] {}), exit ([] {}), p1, p1, p1, p1);
+
+        // Possible entry action interfaces
+        m.state ("A"_STATE, entry ([] {}));
+        m.state ("A"_STATE, entry ([] (int /* event */) {}));
+        m.state ("A"_STATE, entry ([] { return Delay{}; }));
+        m.state ("A"_STATE, entry ([] (int /* event */) { return Delay{}; }));
+
+        // Possible arguments when creating a transition
+        m.transition ("A"_STATE);
+        m.transition ("A"_STATE, [] { return true; });
+        m.transition (
+                "A"_STATE, [] { return true; }, [] () { return Delay{}; });
+
+        // Combined
+        m.state ("A"_STATE, entry ([] {}), exit ([] {}),
+                 m.transition (
+                         "B"_STATE, [] { return true; }, [] () { return Delay{}; }));
+
+        // Machine2<int, StackAllocator<1024>> m2{};
+        // m2.state ("A"_STATE);
+        // // m2.state ("B"_STATE, entry ([] (auto const &i) { std::cout << i << std::endl; }));
+
+        // // Sss (1, 2);
+        // // auto s = sss (entry ([] {}), exit ([] {}));
+        // // auto s = sss (entry ([] {}), exit ([] {}));
+        // // auto ss = sss (entry ([] {}));
+
+        // auto s1 = sssn (entry ([] {}));
+        // auto s2 = sssn (entry ([] {}), p1);
+        // auto s3 = sssn (entry ([] {}), p1, p1, p1, p1);
+        // auto s4 = sssn (entry ([] {}), exit ([] {}), p1, p1, p1, p1);
 }

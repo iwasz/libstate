@@ -34,27 +34,54 @@ template <typename Ev> struct ErasedStateBase {
         virtual const char *getName () const = 0;
         virtual std::type_index getKey () const = 0;
 
-        virtual Delay runEntryActions (Ev const &ev) = 0;
-        virtual void resetEntryActions () = 0;
+        // virtual Delay runEntryActions (Ev const &ev) = 0;
+        // virtual void resetEntryActions () = 0;
 
-        virtual Delay runExitActions (Ev const &ev) = 0;
-        virtual void resetExitActions () = 0;
+        // virtual Delay runExitActions (Ev const &ev) = 0;
+        // virtual void resetExitActions () = 0;
 
-        // TODO maybe return const and make method const and then change ErasedTransition interface to permit reset on const object and...
-        virtual ErasedTransitionBase<Ev> *getTransition (size_t index) = 0;
+        // // TODO maybe return const and make method const and then change ErasedTransition interface to permit reset on const object and...
+        // virtual ErasedTransitionBase<Ev> *getTransition (size_t index) = 0;
 };
 
+#if 0
+template <typename Ev, typename Sn, typename En, typename Ex = std::void_t<>> struct Sssn {
+
+        template <typename Ent, typename = std::enable_if_t<is_entry_v<Ent>>> Sssn (Ent &&en) {}
+
+        template <typename Ent, typename... Tra, typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>...>>>
+        Sssn (Ent &&en, Tra *... tra)
+        {
+        }
+
+        template <typename Ent, typename Exi, typename... Tra,
+                  typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>..., is_exit<Exi>>>>
+        Sssn (Ent &&en, Exi &&ex, Tra *... tra)
+        {
+        }
+};
+#endif
 /**
  *
  */
-template <typename Ev, typename Sn, typename T1 = void, typename T2 = void, typename Tw = boost::hana::tuple<>>
+template <typename Ev, typename Sn, typename T1 = ActionTuple<void>, typename T2 = ActionTuple<void>, typename Tw = boost::hana::tuple<>>
 class ErasedState : public ErasedStateBase<Ev> {
 public:
-        ErasedState (Sn sn) : name (std::move (sn)) {}
+        explicit ErasedState (Sn sn) : name (std::move (sn)) {}
 
-        // explicit ErasedState (State<Sn, T1, T2, T3> &s) : name (std::move (s.name)), entry (std::move (s.entry)), exit (std::move (s.exit)) {}
-        ErasedState (Sn sn, Entry<T1> en, Exit<T2> ex, Tw ts)
-            : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
+        template <typename Ent, typename = std::enable_if_t<is_entry_v<Ent>>>
+        ErasedState (Sn sn, Ent en) : name (std::move (sn)), entryTuple (std::move (en))
+        {
+        }
+
+        template <typename Ent, typename... Tra, typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>...>>>
+        ErasedState (Sn sn, Ent en, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en))
+        {
+        }
+
+        template <typename Ent, typename Exi, typename... Tra,
+                  typename = std::enable_if_t<std::conjunction_v<is_entry<Ent>, is_transition<Tra>..., is_exit<Exi>>>>
+        ErasedState (Sn sn, Ent en, Exi ex, Tra *... tra) : name (std::move (sn)), entryTuple (std::move (en)), exitTuple (std::move (ex))
         {
         }
 
@@ -67,21 +94,22 @@ public:
         const char *getName () const override { return name.c_str (); }
         virtual std::type_index getKey () const { return std::type_index{typeid (name)}; }
 
-        Delay runEntryActions (Ev const &ev) override { return entry (ev); }
-        void resetEntryActions () override { entry.reset (); }
+        // Delay runEntryActions (Ev const &ev) override { return entryTuple (ev); }
+        // void resetEntryActions () override { entryTuple.reset (); }
 
-        Delay runExitActions (Ev const &ev) override { return exit (ev); }
-        void resetExitActions () override { exit.reset (); }
+        // Delay runExitActions (Ev const &ev) override { return exitTuple (ev); }
+        // void resetExitActions () override { exitTuple.reset (); }
 
-        ErasedTransitionBase<Ev> *getTransition (size_t index) override;
+        // ErasedTransitionBase<Ev> *getTransition (size_t index) override;
 
         // private:
         Sn name; // name, entry and exit has the same tyypes and values as in State object
-        Entry<T1> entry;
-        Exit<T2> exit;
+        T1 entryTuple;
+        T2 exitTuple;
         Tw transitions; // transitions at the other hand are wrapped in ErasedTransition <Ev>
 };
 
+#if 0
 /**
  *
  */
@@ -117,7 +145,7 @@ ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t
 
         return nullptr; // TODO
 }
-
+#endif
 /**
  *
  */
