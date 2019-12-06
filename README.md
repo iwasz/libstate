@@ -1,5 +1,5 @@
 # To be documented
-* Initial state == "INIT"_STATE (by convention)
+* Initial state is the state whih was first added (convention).
 * Action callback interface options : can return Done or void, can take an Event argument or void.
 
 # Milestones
