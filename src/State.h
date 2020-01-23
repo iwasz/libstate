@@ -9,10 +9,10 @@
 #pragma once
 #include "Action.h"
 #include "Transition.h"
-#include <boost/hana.hpp>
+#include <tuple>
 
-// TODO remove
-#include <iostream>
+// TODO This is for boost::hana::string_c Copy this from hana to get rid of the dependency
+#include <boost/hana.hpp>
 
 namespace ls {
 
@@ -127,33 +127,23 @@ constexpr ErasedTransitionBase<Ev> *processGetTransition (size_t index, size_t c
 template <typename Ev, typename Sn, typename T1, typename T2, typename T3>
 ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t index)
 {
-        // TODO does not work, why can't I get the size from T3 type directly?
-        // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
-        return boost::hana::unpack (transitions, [index] (auto &... trans) -> ErasedTransitionBase<Ev> * {
+        return std::apply ([index] (auto &... trans) -> ErasedTransitionBase<Ev> * {
                 if constexpr (sizeof...(trans) > 0) {
                         return processGetTransition<Ev> (index, 0, trans...);
                 }
 
                 return nullptr;
-        });
+        }, transitions);
 
         return nullptr; // TODO
 }
 #endif
-/**
- *
- */
-// template <typename Ev, typename Sn, typename T1, typename T2, typename T3>
-// ErasedState<Ev, Sn, T1, T2, T3> erasedState (Sn sn, Entry<T1> en, Exit<T2> ex, T3 ts)
-// {
-//         return ErasedState<Ev, Sn, T1, T2, T3> (std::move (sn), std::move (en), std::move (ex), std::move (ts));
-// }
 
 /**
  * A state - typesafe version. This is only a "type container" which is used to make
  * more specialized "event aware" types. This one is independent of Event type used.
  */
-template <typename Sn, typename En = void, typename Ex = void, typename Tt = boost::hana::tuple<>> class State {
+template <typename Sn, typename En = void, typename Ex = void, typename Tt = std::tuple<>> class State {
 public:
         State () = delete;
         explicit State (Sn sn) : name (std::move (sn)) {}
@@ -163,14 +153,6 @@ public:
             : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
         {
         }
-
-        // size_t getTransitionSizeOf (size_t index) const;
-        // ErasedTransitionBase< Ev>
-
-        // template <typename Ev>
-        // auto makeErasedState () {
-        //     //return ErasedState <Ev> (std:move (name), std::move (entry), std::move (exit));
-        // }
 
 private:
         Sn name;
@@ -200,31 +182,10 @@ constexpr size_t processGetTransitionSizeOf (size_t index, size_t current, T con
 /**
  *
  */
-// template <typename Sn, typename En, typename Ex, typename Tt> size_t State<Sn, En, Ex, Tt>::getTransitionSizeOf (size_t index) const
-// {
-//         // TODO does not work, why can't I get the size from T3 type directly?
-//         // if constexpr (boost::hana::length (transitions) != boost::hana::size_c<0>) {
-//         return boost::hana::unpack (transitions, [index] (auto const &... trans) -> size_t {
-//                 if constexpr (sizeof...(trans) > 0) {
-//                         return processGetTransitionSizeOf (index, 0, trans...);
-//                 }
-
-//                 return 0;
-//         });
-
-//         std::cout << std::endl;
-//         // }
-
-//         return 0;
-// }
-
-/**
- *
- */
 template <typename Sn, typename En, typename Ex, typename... Ts> auto state (Sn &&sn, En &&entry, Ex &&exit, Ts &&... trans)
 {
         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
-                      boost::hana::tuple (std::forward<decltype (trans)> (trans)...));
+                      std::tuple (std::forward<decltype (trans)> (trans)...));
 }
 
 /**

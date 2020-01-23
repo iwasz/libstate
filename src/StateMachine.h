@@ -12,14 +12,13 @@
 #include "State.h"
 #include "Transition.h"
 #include "gsl/pointers"
-#include <boost/hana.hpp>
-#include <boost/hana/fwd/for_each.hpp>
 #include <chrono>
 #include <cstddef>
 #include <etl/map.h>
 #include <gsl/gsl>
 #include <optional>
 #include <pthread.h>
+#include <tuple>
 #include <type_traits>
 #include <typeindex>
 
@@ -231,20 +230,12 @@ template <typename Ev, typename S> class Machine {
 public:
         explicit Machine (S s) : states{std::move (s)}
         {
-                // Look for initial state if current is empty (std::optional is used).
-                // auto initialState = findInitialState ();
-                // currentName = std::type_index (typeid (initialState.name));
-
 #ifndef NDEBUG
                 // std::cout << "Initial : " << initialState.name.c_str () << std::endl;
 #endif
                 Machine *that = this;
 
-                boost::hana::for_each (states, [that] (auto &s) {                // ErasedState <xyz>
-                        boost::hana::for_each (s.transitions, [that] (auto &t) { // ErasedTransition <xyz>
-                                t.stateIdx = that->stateNameToIndex (t.internal.stateName);
-                        });
-                });
+                std::apply ([this] (auto &... s) { processIterateState (s...); }, states);
         }
 
         template <typename Q> void run (Q &&queue);
@@ -266,6 +257,17 @@ private:
         auto findInitialState () const;
         // auto getState (std::type_index const & /* ti*/) -> ErasedStateBase<Ev> *;
 
+        template <typename Tra> void setTransitionTargetStateIndex (Tra &tra) { tra.stateIdx = stateNameToIndex (tra.internal.stateName); }
+
+        template <typename St, typename... Rst> void processIterateState (St &s, Rst &... rest)
+        {
+                std::apply ([] (auto &tran) { processIterateTransitions (tran); }, s.transitions);
+
+                if constexpr (sizeof...(Rst)) {
+                        processIterateState (rest...);
+                }
+        }
+
         ErasedStateBase<Ev> *findState (std::type_index const &stateIndex) {}
 
 private:
@@ -276,59 +278,7 @@ private:
         Timer timer{};
 };
 
-/*--------------------------------------------------------------------------*/
-
-/// Helper for creating a machine.
-// template <typename Ev, typename... Sts> auto machine (Sts &&... states)
-// {
-//         auto s = boost::hana::make_tuple (
-//                 erasedState<Ev> ("_"_STATE, entry ([] {}), exit ([] {}),
-//                                  erasedTransitions<Ev> (boost::hana::make_tuple (transition ("INIT"_STATE, [] (auto /*ev*/) { return true;
-//                                  })))),
-//                 erasedState<Ev> (states.name, states.entry, states.exit, erasedTransitions<Ev> (states.transitions))...);
-
-//         return Machine<Ev, decltype (s)> (std::move (s));
-// }
-
 /****************************************************************************/
-
-template <typename Ev, typename S> auto Machine<Ev, S>::findInitialState () const
-{
-        auto initialState
-                = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'I', 'N', 'I', 'T'>; });
-
-        static_assert (initialState != boost::hana::nothing, "Initial state has to be named \"INIT\"_STATE and it must be defined.");
-
-        auto baseState = boost::hana::find_if (states, [] (auto const &state) { return state.name == boost::hana::string_c<'_'>; });
-
-        static_assert (baseState != boost::hana::nothing, "No base state (internal error).");
-
-        return *baseState;
-}
-
-// template <typename Ev, typename St, typename... Rs> ErasedStateBase<Ev> *processGetState (std::type_index const &ti, St &st, Rs &... rest)
-// {
-//         if (ti == std::type_index (typeid (st.name))) {
-//                 return &st;
-//         }
-
-//         if constexpr (sizeof...(rest)) {
-//                 return processGetState<Ev> (ti, rest...);
-//         }
-
-//         return nullptr;
-// }
-
-// template <typename Ev, typename S> auto Machine<Ev, S>::getState (std::type_index const &ti) -> ErasedStateBase<Ev> *
-// {
-//         return boost::hana::unpack (states, [&ti] (auto &... sts) -> ErasedStateBase<Ev> * {
-//                 if constexpr (sizeof...(sts)) {
-//                         return processGetState<Ev> (ti, sts...);
-//                 }
-
-//                 return nullptr;
-//         });
-// }
 
 template <typename Ev, typename St, typename... Rs>
 constexpr ErasedStateBase<Ev> *processIndexToState (size_t i, size_t currentIdx, St &st, Rs &... rest)
@@ -344,15 +294,19 @@ constexpr ErasedStateBase<Ev> *processIndexToState (size_t i, size_t currentIdx,
         return nullptr;
 }
 
+/*--------------------------------------------------------------------------*/
+
 template <typename Ev, typename S> constexpr ErasedStateBase<Ev> *Machine<Ev, S>::indexToState (size_t i)
 {
-        return boost::hana::unpack (states, [&i] (auto &... sts) -> ErasedStateBase<Ev> * {
-                if constexpr (sizeof...(sts)) {
-                        return processIndexToState<Ev> (i, 0, sts...);
-                }
+        return std::apply (
+                [&i] (auto &... sts) -> ErasedStateBase<Ev> * {
+                        if constexpr (sizeof...(sts)) {
+                                return processIndexToState<Ev> (i, 0, sts...);
+                        }
 
-                return nullptr;
-        });
+                        return nullptr;
+                },
+                states);
 }
 
 /****************************************************************************/
@@ -373,13 +327,15 @@ constexpr size_t processStateNameToIndex (Sn &sn, size_t currentIdx, St &st, Rs 
 
 template <typename Ev, typename S> template <typename Sn> constexpr size_t Machine<Ev, S>::stateNameToIndex (Sn &sn)
 {
-        return boost::hana::unpack (states, [&sn] (auto &... sts) -> size_t {
-                if constexpr (sizeof...(sts)) {
-                        return processStateNameToIndex<Ev> (sn, 0, sts...);
-                }
+        return std::apply (
+                [&sn] (auto &... sts) -> size_t {
+                        if constexpr (sizeof...(sts)) {
+                                return processStateNameToIndex<Ev> (sn, 0, sts...);
+                        }
 
-                return size_t (-1);
-        });
+                        return size_t (-1);
+                },
+                states);
 }
 
 /****************************************************************************/

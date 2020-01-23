@@ -7,11 +7,10 @@
  ****************************************************************************/
 
 #pragma once
-#include <boost/hana.hpp>
-#include <boost/hana/fwd/unpack.hpp>
 #include <chrono>
 #include <gsl/gsl>
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <typeindex>
 
@@ -113,23 +112,21 @@ public:
 
         template <typename Ev> Delay operator() (Ev const &event)
         {
-                // TODO clever unpacking if event is a tuple or pair.
-                // boost::hana::for_each (actions, [&event] (auto &f) { f (event); });
+                return std::apply (
+                        [&event, this] (auto &... args) {
+                                if constexpr (sizeof...(args) > 0) {
+                                        return processActionRunners (event, args...);
+                                }
 
-                return boost::hana::unpack (actions, [&event, this] (auto &... args) {
-                        if constexpr (sizeof...(args) > 0) {
-                                return processActionRunners (event, args...);
-                        }
-
-                        reset ();
-                        return Delay{};
-                });
+                                reset ();
+                                return Delay{};
+                        },
+                        actions);
         }
 
         void reset ()
         {
-                auto resetAll = [] (auto &... args) { (args.reset (), ...); };
-                boost::hana::unpack (actions, resetAll);
+                std::apply ([] (auto &... args) { (args.reset (), ...); }, actions);
         }
 
 private:
@@ -160,7 +157,7 @@ template <typename T> struct TransitionAction : public ActionTuple<T> {
 
 template <template <typename T> class Tu, typename... Ar> auto actionTuple (Ar &&... args)
 {
-        auto tuple = boost::hana::make_tuple (ActionRunner (std::forward<Ar> (args))...);
+        auto tuple = std::make_tuple (ActionRunner (std::forward<Ar> (args))...);
         auto at = Tu<decltype (tuple)> (std::move (tuple));
         return at;
 }
