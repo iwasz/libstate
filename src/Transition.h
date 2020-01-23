@@ -87,37 +87,6 @@ template <typename Sn, typename Cond, typename... Acts> auto transition (Sn &&sn
                            transitionAction (std::forward<decltype (acts)> (acts)...));
 };
 
-/**
- *
- */
-// template <typename Ev, typename Tr> struct ErasedTransition : public ErasedTransitionBase<Ev> {
-
-//         explicit ErasedTransition (Tr tr) noexcept : internal (std::move (tr)) {}
-//         virtual ~ErasedTransition () noexcept = default;
-//         ErasedTransition (ErasedTransition const &t) noexcept : internal (t.internal) {}
-//         ErasedTransition &operator= (ErasedTransition const &) noexcept = default;
-//         ErasedTransition (ErasedTransition &&) noexcept = default;
-//         ErasedTransition &operator= (ErasedTransition &&) noexcept = default;
-
-//         Delay runActions (Ev const &ev) override { return internal.runActions (ev); }
-//         void resetActions () override { internal.resetActions (); }
-//         bool checkCondition (Ev const &ev) const override { return internal.checkCondition (ev); }
-//         std::type_index getStateIndex () const override { return internal.getStateIndex (); }
-//         const char *getStateName () const override { return internal.getStateName (); }
-//         size_t getStateIdx () const override { return stateIdx; }
-
-//         Tr internal;
-//         size_t stateIdx{};
-// };
-
-// template <typename Ev, typename Tr> auto erasedTransition (Tr tr) { return ErasedTransition<Ev, Tr> (std::move (tr)); }
-
-// template <typename Ev, typename Tt> auto erasedTransitions (Tt &&tt)
-// {
-//         // There's probably easier way of doing that in hana.
-//         return boost::hana::unpack (tt, [] (auto... transition) { return boost::hana::make_tuple (erasedTransition<Ev> (transition)...); });
-// }
-
 /****************************************************************************/
 
 template <typename T> struct is_transition : public std::false_type {

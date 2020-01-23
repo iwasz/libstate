@@ -14,16 +14,12 @@
 #include <type_traits>
 #include <typeindex>
 
-// TODO Remove
-#include <functional>
-#include <list>
-
 namespace ls {
 
 /// Common return type for simplicity.
 using Delay = std::chrono::nanoseconds;
 
-static auto DELAY_ZERO = Delay::zero ();
+static const auto DELAY_ZERO = Delay::zero ();
 
 template <typename> struct IsDuration : public std::false_type {
 };
@@ -158,8 +154,7 @@ template <typename T> struct TransitionAction : public ActionTuple<T> {
 template <template <typename T> class Tu, typename... Ar> auto actionTuple (Ar &&... args)
 {
         auto tuple = std::make_tuple (ActionRunner (std::forward<Ar> (args))...);
-        auto at = Tu<decltype (tuple)> (std::move (tuple));
-        return at;
+        return Tu<decltype (tuple)> (std::move (tuple));
 }
 
 template <typename... Ar> auto entry (Ar &&... args) { return actionTuple<Entry, Ar...> (std::forward<Ar> (args)...); }

@@ -6,3 +6,6 @@ CMakeLists.txt.user.22
 CMakeLists.txt.user.4.10-pre1
 build
 compile_commands.json
+test/cortex-m4/build-cortex-m4-*
+test/cortex-m4/CMakeLists.txt.user
+test/cortex-m4/deps/

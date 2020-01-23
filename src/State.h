@@ -8,16 +8,14 @@
 
 #pragma once
 #include "Action.h"
+#include "String.h"
 #include "Transition.h"
 #include <tuple>
-
-// TODO This is for boost::hana::string_c Copy this from hana to get rid of the dependency
-#include <boost/hana.hpp>
 
 namespace ls {
 
 // TODO This is a GNU extension. Provide macro as an option. Or better still, use hana::string explicitly
-template <typename C, C... c> constexpr auto operator""_STATE () { return boost::hana::string_c<c...>; }
+template <typename C, C... c> constexpr auto operator""_STATE () { return ls::string_c<c...>; }
 
 /**
  *
@@ -134,8 +132,6 @@ ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t
 
                 return nullptr;
         }, transitions);
-
-        return nullptr; // TODO
 }
 #endif
 

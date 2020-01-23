@@ -27,7 +27,11 @@ must be persisted between calls to run).
 * [ ] Allow raising an event from inside of actions (somehow).
 * [ ] The code is so generic, that it sometimes accepts wrong type of arguments, like you can pass transition instead of a state. It should be that the compiler reported shuch a misuse on early stage and with meaningful messages.
 * [ ] Configurable (as a template argument?) output class. Defaults to std::cout. oh, it also can be a lambda passed to the run method or something. Another idea is to have "instrument" / "augument" type passed to the run method. It could do all sorts of additional things like logging, measuring performance, making stats etc.
-* Events as std::tuples or std::pairs, and then actions and conditions would get parameter pack of arguments (hana::unpacked or std::apply-ied).
+* [ ] Events as std::tuples or std::pairs, and then actions and conditions would get parameter pack of arguments (hana::unpacked or std::apply-ied).
+* [x] Use std::tuple instead of boost::hana::tuple
+* [x] Remove dependency on hana.
+* [x] Test benchmark size on Cortex-M4 (RTTI is on)
+  * [ ] Remove references to type_info, cannot use the library with RTTI on a µC (well you can, but nobody does that).
 
 Copy (in Polish) of TODOs from the previous version of the lib. 
  
