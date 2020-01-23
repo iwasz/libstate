@@ -149,11 +149,15 @@ Copy (in Polish) of TODOs from the previous version of the lib.
 Time as Linux *time* command shows in *real* row. Binary size is in parentheses next to the run-time.
 
 * libstatemachine **f3c19e87249232ecd65482eac8218fe744f37c15**
-* libstate **df8621dd42cb67af13dcf43ce051c95cbdfbef00**
+* libstate **df8621dd42cb67af13dcf43ce051c95cbdfbef00** (*Approach 1*)
 
-| libstatemachine Debug | Release      | libstate Debug | Release       |
-| --------------------- | ------------ | -------------- | ------------- |
-| 0,228s (482K)         | 0,085s (77K) | 0,560s (8,9M)  | 0,111s (223K) |
+| libstatemachine Debug | Release      |
+| --------------------- | ------------ |
+| 0,228s (482K)         | 0,085s (77K) |
+
+| libstate Debug | Release       |
+| -------------- | ------------- |
+| 0,560s (8,9M)  | 0,111s (223K) |
 
 * libstate **de083d4458ebee313b995fb66eeafad6094f4bd3** - methodology of running state machine was fixed so it is the same as in the other benchmark (in libstatemachine).
 
@@ -168,11 +172,17 @@ Now I'm averaging 10 runs of ```time ./benchmark```.
 | -------------- | ------------- |
 | 0,408s (6.1M)  | 0,100s (230K) |
 
-* libstate **53ac495682a705c2812fd109f7d6aca1551eb541**
+* libstate **53ac495682a705c2812fd109f7d6aca1551eb541** (I think this was *approach 2*)
 
 | libstate Debug | Release           |
 | -------------- | ----------------- |
 | 0,356s (23M)   | **0,084s** (462K) |
+
+* **3681b3454cb59a7a2b82abd1a807307320be2298** *Approach 3* implemented for the first time.
+
+| libstate Debug | Release       |
+| -------------- | ------------- |
+| 0,3104s (878K) | 0,094s (261K) |
 
 # Motivation, goals
 1. **Versatile API**. Expressive, compact definition in one place. No class-per-state approach.
