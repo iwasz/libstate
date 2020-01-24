@@ -120,7 +120,7 @@ template </* typename Ev, TODO problem z auto*/ typename StaT> void Machine<StaT
                 // For all transitions
                 forMatchingTransition (state.transitions, [&ev] (auto &transition) {
 #ifndef NDEBUG
-                        std::cout << "Transition to : " << trans->getStateName () << std::endl;
+                // std::cout << "Transition to : " << trans->getStateName () << std::endl;
 #endif
                         // forCurrentState ([&ev] (auto &state) { state.runEntry (ev); });
                         // transition.runTransitionActions (ev);
