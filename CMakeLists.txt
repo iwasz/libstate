@@ -37,4 +37,8 @@ ADD_EXECUTABLE (benchmarktest
     "test/benchmark.cc"
 )
 
+ADD_EXECUTABLE (tupleTest
+    "test/tupleTest.cc"
+)
+
 target_compile_definitions(benchmarktest PRIVATE NDEBUG=1)

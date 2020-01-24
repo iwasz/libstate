@@ -7,7 +7,6 @@
  ****************************************************************************/
 
 #include "StateMachine.h"
-// #include <deque>
 #include <etl/deque.h>
 
 int main ()
@@ -75,7 +74,6 @@ int main ()
 
         m.state ("FINAL"_STATE, entry (res ("FINAL entry")));
 
-        //  std::deque<std::string> evq;
         etl::deque<std::string, 16> evq;
         m.run (evq); // _->INIT
 
