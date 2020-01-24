@@ -329,4 +329,47 @@ FILE SIZE        VM SIZE
 0.0%       8   0.3%       8    [LOAD #3 [RX]]
 0.0%       4   0.1%       4    [LOAD #4 [R]]
 100.0%  16.0Ki 100.0%  2.76Ki    TOTAL
+
+    FILE SIZE        VM SIZE
+ --------------  --------------
+  46.2%  95.7Ki   0.0%       0    .debug_str
+  26.2%  54.2Ki   0.0%       0    .debug_info
+   9.1%  18.9Ki   0.0%       0    .strtab
+   3.3%  6.86Ki  48.5%  6.80Ki    .text
+   2.9%  6.06Ki   0.0%       0    [Unmapped]
+   2.3%  4.69Ki   0.0%       0    .debug_line
+   2.2%  4.63Ki   0.0%       0    .symtab
+   1.9%  3.84Ki  27.0%  3.78Ki    .eh_frame
+   1.5%  3.12Ki   0.0%       0    .debug_abbrev
+   0.9%  1.84Ki   0.0%       0    .debug_aranges
+   0.9%  1.83Ki   0.0%       0    .debug_ranges
+   0.5%    1004   6.6%     940    .eh_frame_hdr
+   0.3%     686   4.8%     686    [LOAD #2 [R]]
+   0.3%     592   3.7%     528    .dynamic
+   0.2%     411   0.0%       0    .shstrtab
+   0.2%     338   1.9%     274    .dynstr
+   0.1%     304   1.7%     240    .dynsym
+   0.1%     280   1.5%     216    .rela.dyn
+   0.1%     192   0.9%     128    .gnu.version_r
+   0.1%     136   0.5%      72    .rela.plt
+   0.1%     128   0.4%      64    .plt
+   0.1%     128   0.0%       0    [ELF Headers]
+   0.1%     112   0.3%      48    .got.plt
+   0.0%     104   0.3%      40    .got
+   0.0%     103   0.3%      39    .gcc_except_table
+   0.0%     100   0.3%      36    .note.gnu.build-id
+   0.0%      96   0.2%      32    .note.ABI-tag
+   0.0%      92   0.2%      28    .gnu.hash
+   0.0%      92   0.2%      28    .interp
+   0.0%      91   0.2%      27    .init
+   0.0%      84   0.1%      20    .gnu.version
+   0.0%      81   0.0%       0    .comment
+   0.0%      80   0.1%      16    .data
+   0.0%      77   0.1%      13    .fini
+   0.0%      72   0.1%       8    .fini_array
+   0.0%      72   0.1%       8    .init_array
+   0.0%       0   0.1%       8    .bss
+   0.0%       8   0.1%       8    [LOAD #3 [RX]]
+   0.0%       4   0.0%       4    [LOAD #4 [R]]
+ 100.0%   207Ki 100.0%  14.0Ki    TOTAL
 */
