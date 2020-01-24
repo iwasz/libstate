@@ -37,9 +37,9 @@ template <typename Ev, typename Sn, typename Con, typename TacT> auto transition
 
 /****************************************************************************/
 
-template <size_t index> struct Name {
+template <int index> struct Name {
         const char *getName () const { return "TODO"; }
-        static constexpr size_t getIndex () { return index; }
+        static constexpr int getIndex () { return index; }
 };
 
 template <typename Ev, typename Sn, typename EntT, typename TraT, typename ExiT> struct State {
@@ -87,7 +87,7 @@ template </* typename Ev, TODO problem z auto*/ typename StaT> struct Machine {
 };
 
 namespace impl {
-template <typename Sta, typename Fun> auto runIfCurrent (int current, Fun &&fun)
+template <typename Sta, typename Fun> auto runIfCurrentState (int current, Fun &&fun)
 {
         return [&fun, current] (auto &state) {
                 if (Sta::Name::getIndex () == current) {
@@ -104,12 +104,32 @@ template <typename StaT> template <typename Fun> void Machine<StaT>::forCurrentS
 {
         std::apply (
                 [&function, this] (auto &... state) {
-                        (impl::runIfCurrent<std::remove_reference_t<decltype (state)>> (currentStateIndex, function) (state) || ...);
+                        (impl::runIfCurrentState<std::remove_reference_t<decltype (state)>> (currentStateIndex, function) (state) || ...);
                 },
                 states);
 }
 
-template <typename TraT, typename Fun> void forMatchingTransition (TraT &transitions, Fun &&function) {}
+namespace impl {
+template <typename Tra, typename Fun> auto runIfMatchingTransition (Tra &transition, Fun &&fun)
+{
+        return [&fun, &transition] (int ev) {
+                if (transition.condition (ev)) {
+                        fun (transition);
+                        return true;
+                }
+
+                return false;
+        };
+}
+} // namespace impl
+
+template <typename TraT, typename Fun> void forMatchingTransition (int ev, TraT &transitions, Fun &&function)
+{
+
+        std::apply ([&ev, &function] (
+                            auto &... transition) { (impl::runIfMatchingTransition (transition, std::forward<Fun> (function)) (ev) || ...); },
+                    transitions);
+}
 
 template </* typename Ev, TODO problem z auto*/ typename StaT> void Machine<StaT>::run (int ev)
 {
@@ -118,7 +138,7 @@ template </* typename Ev, TODO problem z auto*/ typename StaT> void Machine<StaT
         forCurrentState ([ev] (auto &state) {
                 // For all events {}
                 // For all transitions
-                forMatchingTransition (state.transitions, [&ev] (auto &transition) {
+                forMatchingTransition (ev, state.transitions, [&ev] (auto &transition) {
 #ifndef NDEBUG
                 // std::cout << "Transition to : " << trans->getStateName () << std::endl;
 #endif
@@ -203,7 +223,7 @@ int main ()
                                      std::make_tuple (transition<int, Name<1>> (eq (-2), std::make_tuple (res (65), res (66))),
                                                       transition<int, Name<2>> (eq (2), std::make_tuple (res (65), res (66)))),
                                      std::make_tuple (res (3), res (4)))
-#define FULL 0
+#define FULL 1
 #if FULL
                         ,
                 state<int, Name<2>> (std::make_tuple (res (5), res (6)),
@@ -330,46 +350,85 @@ FILE SIZE        VM SIZE
 0.0%       4   0.1%       4    [LOAD #4 [R]]
 100.0%  16.0Ki 100.0%  2.76Ki    TOTAL
 
-    FILE SIZE        VM SIZE
+FILE SIZE        VM SIZE
  --------------  --------------
-  46.2%  95.7Ki   0.0%       0    .debug_str
-  26.2%  54.2Ki   0.0%       0    .debug_info
-   9.1%  18.9Ki   0.0%       0    .strtab
-   3.3%  6.86Ki  48.5%  6.80Ki    .text
-   2.9%  6.06Ki   0.0%       0    [Unmapped]
-   2.3%  4.69Ki   0.0%       0    .debug_line
-   2.2%  4.63Ki   0.0%       0    .symtab
-   1.9%  3.84Ki  27.0%  3.78Ki    .eh_frame
-   1.5%  3.12Ki   0.0%       0    .debug_abbrev
-   0.9%  1.84Ki   0.0%       0    .debug_aranges
-   0.9%  1.83Ki   0.0%       0    .debug_ranges
-   0.5%    1004   6.6%     940    .eh_frame_hdr
-   0.3%     686   4.8%     686    [LOAD #2 [R]]
-   0.3%     592   3.7%     528    .dynamic
-   0.2%     411   0.0%       0    .shstrtab
-   0.2%     338   1.9%     274    .dynstr
-   0.1%     304   1.7%     240    .dynsym
-   0.1%     280   1.5%     216    .rela.dyn
-   0.1%     192   0.9%     128    .gnu.version_r
-   0.1%     136   0.5%      72    .rela.plt
-   0.1%     128   0.4%      64    .plt
-   0.1%     128   0.0%       0    [ELF Headers]
-   0.1%     112   0.3%      48    .got.plt
-   0.0%     104   0.3%      40    .got
-   0.0%     103   0.3%      39    .gcc_except_table
-   0.0%     100   0.3%      36    .note.gnu.build-id
-   0.0%      96   0.2%      32    .note.ABI-tag
-   0.0%      92   0.2%      28    .gnu.hash
-   0.0%      92   0.2%      28    .interp
-   0.0%      91   0.2%      27    .init
-   0.0%      84   0.1%      20    .gnu.version
+  76.5%  3.18Mi   0.0%       0    .debug_str
+  11.6%   491Ki   0.0%       0    .strtab
+   5.8%   245Ki   0.0%       0    .debug_info
+   2.0%  85.5Ki  62.2%  85.4Ki    .text
+   1.0%  43.8Ki   0.0%       0    .debug_line
+   0.9%  39.5Ki  28.7%  39.5Ki    .eh_frame
+   0.8%  32.5Ki   0.0%       0    .symtab
+   0.4%  19.1Ki   0.0%       0    .debug_aranges
+   0.4%  19.0Ki   0.0%       0    .debug_ranges
+   0.2%  9.59Ki   6.9%  9.53Ki    .eh_frame_hdr
+   0.2%  6.72Ki   0.0%       0    [Unmapped]
+   0.1%  3.23Ki   0.0%       0    .debug_abbrev
+   0.0%     686   0.5%     686    [LOAD #2 [R]]
+   0.0%     592   0.4%     528    .dynamic
+   0.0%     572   0.4%     508    .gcc_except_table
+   0.0%     411   0.0%       0    .shstrtab
+   0.0%     338   0.2%     274    .dynstr
+   0.0%     304   0.2%     240    .dynsym
+   0.0%     280   0.2%     216    .rela.dyn
+   0.0%     192   0.1%     128    .gnu.version_r
+   0.0%     136   0.1%      72    .rela.plt
+   0.0%     128   0.0%      64    .plt
+   0.0%     128   0.0%       0    [ELF Headers]
+   0.0%     112   0.0%      48    .got.plt
+   0.0%     104   0.0%      40    .got
+   0.0%     100   0.0%      36    .note.gnu.build-id
+   0.0%      96   0.0%      32    .note.ABI-tag
+   0.0%      92   0.0%      28    .gnu.hash
+   0.0%      92   0.0%      28    .interp
+   0.0%      91   0.0%      27    .init
+   0.0%      84   0.0%      20    .gnu.version
    0.0%      81   0.0%       0    .comment
-   0.0%      80   0.1%      16    .data
-   0.0%      77   0.1%      13    .fini
-   0.0%      72   0.1%       8    .fini_array
-   0.0%      72   0.1%       8    .init_array
-   0.0%       0   0.1%       8    .bss
-   0.0%       8   0.1%       8    [LOAD #3 [RX]]
+   0.0%      80   0.0%      16    .data
+   0.0%      77   0.0%      13    .fini
+   0.0%      72   0.0%       8    .fini_array
+   0.0%      72   0.0%       8    .init_array
+   0.0%       0   0.0%       8    .bss
+   0.0%       8   0.0%       8    [LOAD #3 [RX]]
    0.0%       4   0.0%       4    [LOAD #4 [R]]
- 100.0%   207Ki 100.0%  14.0Ki    TOTAL
+ 100.0%  4.16Mi 100.0%   137Ki    TOTAL
+
+ STRIPPED
+
+     FILE SIZE        VM SIZE
+ --------------  --------------
+  58.5%  85.5Ki  62.2%  85.4Ki    .text
+  27.1%  39.5Ki  28.7%  39.5Ki    .eh_frame
+   6.6%  9.59Ki   6.9%  9.53Ki    .eh_frame_hdr
+   4.6%  6.71Ki   0.0%       0    [Unmapped]
+   0.5%     686   0.5%     686    [LOAD #2 [R]]
+   0.4%     592   0.4%     528    .dynamic
+   0.4%     572   0.4%     508    .gcc_except_table
+   0.2%     338   0.2%     274    .dynstr
+   0.2%     317   0.0%       0    .shstrtab
+   0.2%     304   0.2%     240    .dynsym
+   0.2%     280   0.2%     216    .rela.dyn
+   0.1%     192   0.1%     128    .gnu.version_r
+   0.1%     136   0.1%      72    .rela.plt
+   0.1%     128   0.0%      64    .plt
+   0.1%     128   0.0%       0    [ELF Headers]
+   0.1%     112   0.0%      48    .got.plt
+   0.1%     104   0.0%      40    .got
+   0.1%     100   0.0%      36    .note.gnu.build-id
+   0.1%      96   0.0%      32    .note.ABI-tag
+   0.1%      92   0.0%      28    .gnu.hash
+   0.1%      92   0.0%      28    .interp
+   0.1%      91   0.0%      27    .init
+   0.1%      84   0.0%      20    .gnu.version
+   0.1%      81   0.0%       0    .comment
+   0.1%      80   0.0%      16    .data
+   0.1%      77   0.0%      13    .fini
+   0.0%      72   0.0%       8    .fini_array
+   0.0%      72   0.0%       8    .init_array
+   0.0%       0   0.0%       8    .bss
+   0.0%       8   0.0%       8    [LOAD #3 [RX]]
+   0.0%       4   0.0%       4    [LOAD #4 [R]]
+ 100.0%   146Ki 100.0%   137Ki    TOTAL
+
+
 */
