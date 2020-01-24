@@ -139,57 +139,57 @@ ErasedTransitionBase<Ev> *ErasedState<Ev, Sn, T1, T2, T3>::getTransition (size_t
  * A state - typesafe version. This is only a "type container" which is used to make
  * more specialized "event aware" types. This one is independent of Event type used.
  */
-template <typename Sn, typename En = void, typename Ex = void, typename Tt = std::tuple<>> class State {
-public:
-        State () = delete;
-        explicit State (Sn sn) : name (std::move (sn)) {}
-        State (Sn sn, Entry<En> en) : name (std::move (sn)), entry (std::move (en)) {}
-        State (Sn sn, Entry<En> en, Exit<Ex> ex) : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)) {}
-        State (Sn sn, Entry<En> en, Exit<Ex> ex, Tt ts)
-            : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
-        {
-        }
+// template <typename Sn, typename En = void, typename Ex = void, typename Tt = std::tuple<>> class State {
+// public:
+//         State () = delete;
+//         explicit State (Sn sn) : name (std::move (sn)) {}
+//         State (Sn sn, Entry<En> en) : name (std::move (sn)), entry (std::move (en)) {}
+//         State (Sn sn, Entry<En> en, Exit<Ex> ex) : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)) {}
+//         State (Sn sn, Entry<En> en, Exit<Ex> ex, Tt ts)
+//             : name (std::move (sn)), entry (std::move (en)), exit (std::move (ex)), transitions (std::move (ts))
+//         {
+//         }
 
-private:
-        Sn name;
-        Entry<En> entry;
-        Exit<Ex> exit;
-        Tt transitions;
-        // constexpr size_t transitionsNumber;
-};
-
-/**
- *
- */
-template <typename T, typename... Rs>
-constexpr size_t processGetTransitionSizeOf (size_t index, size_t current, T const &transition, Rs const &... rest)
-{
-        if (index == current) {
-                return sizeof (transition);
-        }
-
-        if constexpr (sizeof...(rest)) {
-                return processGetTransitionSizeOf (index, current + 1, rest...);
-        }
-
-        return 0;
-}
+// private:
+//         Sn name;
+//         Entry<En> entry;
+//         Exit<Ex> exit;
+//         Tt transitions;
+//         // constexpr size_t transitionsNumber;
+// };
 
 /**
  *
  */
-template <typename Sn, typename En, typename Ex, typename... Ts> auto state (Sn &&sn, En &&entry, Ex &&exit, Ts &&... trans)
-{
-        return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
-                      std::tuple (std::forward<decltype (trans)> (trans)...));
-}
+// template <typename T, typename... Rs>
+// constexpr size_t processGetTransitionSizeOf (size_t index, size_t current, T const &transition, Rs const &... rest)
+// {
+//         if (index == current) {
+//                 return sizeof (transition);
+//         }
 
-/**
- *
- */
-template <typename Sn, typename En> auto state (Sn &&sn, En &&entry)
-{
-        return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry));
-}
+//         if constexpr (sizeof...(rest)) {
+//                 return processGetTransitionSizeOf (index, current + 1, rest...);
+//         }
+
+//         return 0;
+// }
+
+// /**
+//  *
+//  */
+// template <typename Sn, typename En, typename Ex, typename... Ts> auto state (Sn &&sn, En &&entry, Ex &&exit, Ts &&... trans)
+// {
+//         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry), std::forward<decltype (exit)> (exit),
+//                       std::tuple (std::forward<decltype (trans)> (trans)...));
+// }
+
+// /**
+//  *
+//  */
+// template <typename Sn, typename En> auto state (Sn &&sn, En &&entry)
+// {
+//         return State (std::forward<decltype (sn)> (sn), std::forward<decltype (entry)> (entry));
+// }
 
 } // namespace ls
