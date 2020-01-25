@@ -218,6 +218,23 @@ m->state (AT_QBTGATSREG)->entry (at ("AT+QBTGATSREG=1,\"ABC2\"\r\n"))
 ## First attepmpt (new)
 Both state collection and the algorithm was template generated i.e. all the states and their internals were hana::tuples. Compile time iteration over compile time collections was implemented. Implication is that I couldn't store intermediate results between ```Machine::run``` calls because I would never know what is it's type (i.e. current state type). The way it worked in case of a delay action is it had to find the current state at the beginning of every run method call. So the drawback was : executable was big, and ran slower than the old version because the current state had to be found every time the ```Machine::run``` was run even though it was found in the previous run.
 
+### First attempt analysis (of output binary size)
+I reimplemented this from the start the other day and carefully obseved how output binary size increased after each slight change. 
+
+Most size increase came from to **many nested iterations** over std::tuples. At some point I had this nesting:
+
+* For every state - check if this state is the "current state" (16 states).
+  * For every transition -  check its condition (2 transitions for every state)
+    * For every state - find current state and run its exit actrions (16)
+    * For every state - find the state we are transitioning to and run its entry actions (16)
+
+This was naiive implementation and it had 16 * 2 * 16 * 16 = 1024 if branches that had to be generated. 
+
+After reducing the nesting to only 2 levels (16*2) size dropped drastically (to the levels more than satifactory, but event type was set to int so comparison was not fair).
+
+Next code bloat came from **chainging the event type from int to std::string**. After this the output size increased 10 times from 22Ki to 233Ki. I cannot get lower than 230Ki whatever approach I used.
+
+
 ## Second attempt
 Implementation 2 used type Erasure which made runtime polymorphic interface for state and transition and thus made storing a pointer (to a base class) to them possible. This made it significantly faster but executable size is even bigger than before (presumably because of new templates ErasedState and ErasedTransition).
 
