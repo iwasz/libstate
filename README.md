@@ -230,9 +230,13 @@ Most size increase came from to **many nested iterations** over std::tuples. At 
 
 This was naiive implementation and it had 16 * 2 * 16 * 16 = 1024 if branches that had to be generated. 
 
-After reducing the nesting to only 2 levels (16*2) size dropped drastically (to the levels more than satifactory, but event type was set to int so comparison was not fair).
+After reducing the nesting to only 2 levels (16*2) size dropped drastically (to the levels more than satifactory, but event type was set to int so comparison was not conclusive).
 
-Next code bloat came from **chainging the event type from int to std::string**. After this the output size increased 10 times from 22Ki to 233Ki. I cannot get lower than 230Ki whatever approach I used.
+Next code bloat came from **chainging the event type from int to std::string**. After this the output size increased 10 times from 22Ki to 233Ki. I cannot get lower than 230Ki whatever approach I used (-O3 wise).
+
+Then I noticed third issue (well mistake actually) that I passed ```const char *``` as an event even though conditions and actions worked on ```std::strings```. This generated lots of additional conversions. Simply adding a "s" suffix reduced the output even further. 
+
+I also found it difficult to get track of all the measurements which I made after every slight change for -O3, -O0 and -O0-stripped versions. I easilly got confused and compared wrong measurements.
 
 
 ## Second attempt
