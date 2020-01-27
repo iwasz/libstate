@@ -13,10 +13,14 @@
 #include <utility>
 #include <vector>
 
+#include "Misc.h"
+
 #define DEBUG 0
 #if DEBUG
 #include <iostream>
 #endif
+
+using namespace ls;
 
 template <typename Sn, typename Con, typename TacT> struct Transition {
 
@@ -61,7 +65,6 @@ template <typename Sn, typename EntT, typename TraT, typename ExiT> struct State
         State (EntT en, TraT tr, ExiT ex) : entryActions{std::move (en)}, transitions{std::move (tr)}, exitActions{std::move (ex)} {}
 
         template <typename Ev> void runEntry (Ev const &ev);
-
         template <typename Ev> void runExit (Ev const &ev);
 
         EntT entryActions;
@@ -120,6 +123,7 @@ template <typename StaT> struct Machine {
 
         StaT states;
         int currentStateIndex{1};
+        Timer timer;
 };
 
 template <typename... Sta> constexpr auto machine (Sta &&... states) { return Machine (std::make_tuple (states...)); }
@@ -168,16 +172,29 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
                 transitions);
 }
 
+template <typename T, typename = std::void_t<>> struct is_state_entry_no_arg : public std::false_type {
+};
+template <typename T> struct is_state_entry_no_arg<T, std::void_t<decltype (std::declval<T &> ().runEntry ())>> : public std::true_type {
+};
+
 template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev const &ev)
 {
-        // TODO timer.
+        if (!timer.isExpired ()) {
+                return;
+        }
+
         // TODO Currently hardcoded currentState to 1
 
         forCurrentState ([&ev, machine = this] (auto &state) {
                 // TODO For all events {}
 
                 // If not run
+                // if constexpr (is_state_entry_no_arg<std::remove_reference_t<decltype (state)>>::value) {
+                //         state.runEntry ();
+                // }
+                // else {
                 state.runEntry (ev);
+                // }
 
                 forMatchingTransition (ev, state.transitions, [&ev, machine, &state] (auto &transition) {
 #ifndef NDEBUG
@@ -279,11 +296,13 @@ int main ()
                 };
         };
 
+        // auto nes = [&results] (const char *const message) { return [&results, message] () { results.emplace_back (message); }; };
+
         auto eq = [] (const char *what) { return [what] (auto const &i) -> bool { return i == what; }; };
 
         auto m = machine (
                 state<Name<1>> (entry (res ("INIT entry")), exit (res ("INIT exit")), transition<Name<2>> (eq ("2"), res ("65"), res ("66")))
-#define FULL 1
+#define FULL 0
 #if FULL
 
                         ,
