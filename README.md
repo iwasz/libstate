@@ -155,9 +155,9 @@ Time as Linux *time* command shows in *real* row. Binary size is in parentheses 
 * libstatemachine **f3c19e87249232ecd65482eac8218fe744f37c15**
 * libstate **df8621dd42cb67af13dcf43ce051c95cbdfbef00** (*Approach 1*)
 
-| libstatemachine Debug | Release      |
-| --------------------- | ------------ |
-| 0,228s (482K)         | 0,085s (77K) |
+| libstatemachine Debug | Release / stripped |
+| --------------------- | ------------------ |
+| 0,228s (482K/111K)    | 0,085s (77K/67K)   |
 
 | libstate Debug | Release       |
 | -------------- | ------------- |
@@ -236,7 +236,7 @@ Next code bloat came from **chainging the event type from int to std::string**. 
 
 Then I noticed third issue (well mistake actually) that I passed ```const char *``` as an event even though conditions and actions worked on ```std::strings```. This generated lots of additional conversions. Simply adding a "s" suffix reduced the output even further. 
 
-I also found it difficult to get track of all the measurements which I made after every slight change for -O3, -O0 and -O0-stripped versions. I easilly got confused and compared wrong measurements.
+I also found it difficult to get track of all the measurements which I made after every slight change for -O3, -O0 and -O0-stripped versions. I easilly got confused and compared wrong measurements. Another thing I didn't know is that even -O3 binary can be stripped. In my case ```.strtab``` and ```.symtab``` sections shrank and I got more tnah 50% savings.
 
 
 ## Second attempt

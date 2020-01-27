@@ -110,13 +110,30 @@ template <typename Sta, typename Fun> auto runIfCurrentState (int current, Fun &
                 return false;
         };
 }
+
+template <typename Fun, typename Sta, typename... Rst> void runIfCurrentState2 (int current, Fun &&fun, Sta &state, Rst &... rest)
+{
+        if (Sta::Name::getIndex () == current) {
+                fun (state);
+                return;
+        }
+
+        if constexpr (sizeof...(rest) > 0) {
+                runIfCurrentState2 (current, std::forward<Fun> (fun), rest...);
+        }
+}
+
 } // namespace impl
 
 template <typename StaT> template <typename Fun> void Machine<StaT>::forCurrentState (Fun &&function)
 {
         std::apply (
                 [&function, this] (auto &... state) {
-                        (impl::runIfCurrentState<std::remove_reference_t<decltype (state)>> (currentStateIndex, function) (state) || ...);
+                        // (impl::runIfCurrentState<std::remove_reference_t<decltype (state)>> (currentStateIndex,
+                        //                                                                      std::forward<Fun> (function)) (state)
+                        //  || ...);
+
+                        impl::runIfCurrentState2 (currentStateIndex, std::forward<Fun> (function), state...);
                 },
                 states);
 }
@@ -133,13 +150,29 @@ template <typename Tra, typename Fun> auto runIfMatchingTransition (Tra &transit
                 return false;
         };
 }
+
+template <typename Fun, typename Ev, typename Tra, typename... Rst>
+void runIfMatchingTransition2 (Fun &&fun, Ev const &ev, Tra &transition, Rst &... rest)
+{
+        if (transition.condition (ev)) {
+                fun (transition);
+                return;
+        }
+
+        if constexpr (sizeof...(rest)) {
+                runIfMatchingTransition2 (std::forward<Fun> (fun), ev, rest...);
+        }
+}
 } // namespace impl
 
 template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (Ev const &ev, TraT &transitions, Fun &&function)
 {
-        std::apply ([&ev, &function] (
-                            auto &... transition) { (impl::runIfMatchingTransition (transition, std::forward<Fun> (function)) (ev) || ...); },
-                    transitions);
+        std::apply (
+                [&ev, &function] (auto &... transition) {
+                        //(impl::runIfMatchingTransition (transition, std::forward<Fun> (function)) (ev) || ...);
+                        impl::runIfMatchingTransition2 (std::forward<Fun> (function), ev, transition...);
+                },
+                transitions);
 }
 
 template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev const &ev)
@@ -229,15 +262,29 @@ end:;
 
 /****************************************************************************/
 
+// struct res {
+//         res (std::string s) : message{std::move (s)} {}
+//         void operator() (std::string const &) { results.push_back (message); }
+
+// private:
+//         std::string message;
+// };
+
 int main ()
 {
 #if 1
+        std::vector<std::string> results;
         using namespace std::string_literals;
 
         // int results{};
-        std::vector<std::string> results;
 
-        auto res = [&results] (std::string const &message) { return [&results, message] (auto const &) { results.push_back (message); }; };
+        auto res = [&results] (const char *message) {
+                return [&results, message] (auto const &ev) {
+                        results.emplace_back (message);
+                        // results.push_back (ev);
+                };
+        };
+
         auto eq = [] (std::string const &what) { return [what] (auto const &i) -> bool { return i == what; }; };
 
         auto m = Machine (std::make_tuple (
@@ -324,7 +371,7 @@ int main ()
 #endif
                         ));
 
-        m.run (std::string ("1"s)); // TODO already in init state
+        m.run ("1"s); // TODO already in init state
         assert (m.currentStateIndex == 1);
 
         for (int i = 0; i < 10000; ++i) {
