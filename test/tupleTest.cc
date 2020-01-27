@@ -44,8 +44,7 @@ template <typename Sn, typename Con, typename TacT> template <typename Ev> void 
 
 template <typename Sn, typename Con, typename... Tac> auto transition (Con &&condition, Tac &&... actions)
 {
-        return Transition<Sn, Con, decltype (std::forward_as_tuple (actions...))> (std::forward<Con> (condition),
-                                                                                   std::forward_as_tuple (actions...));
+        return Transition<Sn, Con, decltype (std::make_tuple (actions...))> (std::forward<Con> (condition), std::make_tuple (actions...));
 }
 
 /****************************************************************************/
@@ -91,12 +90,12 @@ void State<Sn, EntT, TraT, ExiT>::runExit (Ev const &ev)
 
 template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state (EntT &&en, ExiT &&ex, Tra &&... tra)
 {
-        return State<Sn, EntT, decltype (std::forward_as_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::forward_as_tuple (tra...),
-                                                                                 std::forward<ExiT> (ex));
+        return State<Sn, EntT, decltype (std::make_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::make_tuple (tra...),
+                                                                           std::forward<ExiT> (ex));
 }
 
-template <typename... Act> constexpr auto entry (Act &&... act) { return std::forward_as_tuple (act...); }
-template <typename... Act> constexpr auto exit (Act &&... act) { return std::forward_as_tuple (act...); }
+template <typename... Act> constexpr auto entry (Act &&... act) { return std::make_tuple (act...); }
+template <typename... Act> constexpr auto exit (Act &&... act) { return std::make_tuple (act...); }
 
 /****************************************************************************/
 
@@ -113,7 +112,7 @@ template <typename StaT> struct Machine {
         int currentStateIndex{1};
 };
 
-template <typename... Sta> constexpr auto machine (Sta &&... states) { return Machine (std::forward_as_tuple (states...)); }
+template <typename... Sta> constexpr auto machine (Sta &&... states) { return Machine (std::make_tuple (states...)); }
 
 namespace impl {
 template <typename Fun, typename Sta, typename... Rst> void runIfCurrentState2 (int current, Fun &&fun, Sta &state, Rst &... rest)
@@ -262,10 +261,11 @@ int main ()
 
         // int results{};
 
-        auto res = [&results] (const char *message) {
+        auto res = [&results] (const char *const message) {
                 return [&results, message] (auto const &ev) {
                         results.emplace_back (message);
                         // results.push_back (ev);
+                        // std::cout << msg << ", " << ev << std::endl;
                 };
         };
 
