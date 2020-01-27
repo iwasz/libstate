@@ -59,13 +59,9 @@ template <int index> struct Name {
 };
 
 template <typename Sn, typename EntT, typename TraT, typename ExiT> struct State {
-
         using Name = Sn;
 
         State (EntT en, TraT tr, ExiT ex) : entryActions{std::move (en)}, transitions{std::move (tr)}, exitActions{std::move (ex)} {}
-
-        template <typename Ev> void runEntry (Ev const &ev);
-        template <typename Ev> void runExit (Ev const &ev);
 
         EntT entryActions;
         TraT transitions;
@@ -79,19 +75,25 @@ template <typename Ev, typename... Acts> inline void runActions (Ev const &ev, s
 
 template <typename Ev, typename Act> inline void runActions (Ev const &ev, Act &action) { action (ev); }
 
-template <typename Sn, typename EntT, typename TraT, typename ExiT>
-template <typename Ev>
-void State<Sn, EntT, TraT, ExiT>::runEntry (Ev const &ev)
+template <typename Ev, typename Act> void runSomeActions (Ev const &ev, Act &actions) { runActions (ev, actions); }
+
+/*--------------------------------------------------------------------------*/
+
+template <typename... Acts> inline void runActions (std::tuple<Acts...> &actions)
 {
-        runActions (ev, entryActions);
+        std::apply ([] (auto &... action) { (action (), ...); }, actions);
 }
 
-template <typename Sn, typename EntT, typename TraT, typename ExiT>
-template <typename Ev>
-void State<Sn, EntT, TraT, ExiT>::runExit (Ev const &ev)
-{
-        runActions (ev, exitActions);
-}
+template <typename Act> inline void runActions (Act &action) { action (); }
+
+template <typename Act> void runSomeActions (Act &actions) { runActions (actions); }
+
+// template <typename Sn, typename EntT, typename TraT, typename ExiT>
+// template <typename Ev>
+// void State<Sn, EntT, TraT, ExiT>::runExit (Ev const &ev)
+// {
+//         runActions (ev, exitActions);
+// }
 
 // template <typename Sn, typename EntT, typename TraT, typename ExiT> auto state (EntT &&en, TraT &&tra, ExiT &&ex)
 // {
@@ -172,10 +174,10 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
                 transitions);
 }
 
-template <typename T, typename = std::void_t<>> struct is_state_entry_no_arg : public std::false_type {
-};
-template <typename T> struct is_state_entry_no_arg<T, std::void_t<decltype (std::declval<T &> ().runEntry ())>> : public std::true_type {
-};
+// template <typename T, typename = std::void_t<>> struct is_state_entry_no_arg : public std::false_type {
+// };
+// template <typename T> struct is_state_entry_no_arg<T, std::void_t<decltype (std::declval<T &> ().runEntry ())>> : public std::true_type {
+// };
 
 template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev const &ev)
 {
@@ -189,19 +191,25 @@ template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev cons
                 // TODO For all events {}
 
                 // If not run
-                // if constexpr (is_state_entry_no_arg<std::remove_reference_t<decltype (state)>>::value) {
-                //         state.runEntry ();
-                // }
-                // else {
-                state.runEntry (ev);
-                // }
+                if constexpr (std::is_invocable_v<decltype (state.entryActions), Ev const &>) {
+                        runSomeActions (ev, state.entryActions);
+                }
+                else {
+                        runSomeActions (state.entryActions);
+                }
 
                 forMatchingTransition (ev, state.transitions, [&ev, machine, &state] (auto &transition) {
 #ifndef NDEBUG
                 // std::cout << "Transition to : " << trans->getStateName () << std::endl;
 #endif
                         // machine->forCurrentState ([&ev] (auto &state) { state.runExit (ev); });
-                        state.runExit (ev);
+                        if constexpr (std::is_invocable_v<decltype (state.exitActions), Ev const &>) {
+                                runSomeActions (ev, state.exitActions);
+                        }
+                        else {
+                                runSomeActions (state.exitActions);
+                        }
+
                         transition.runTransitionActions (ev);
                         machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
 
@@ -280,82 +288,88 @@ end:;
 //         std::string message;
 // };
 
+// std::vector<std::string> results2;
+// auto res (std::string const &message)
+// {
+//         return [message] (auto const &ev) { results2.push_back (message); };
+// }
+
+// class res {
+// public:
+//         res (std::string m) : message (std::move (m)) {}
+//         void operator() (std::string const &) { results2.push_back (message); }
+
+// private:
+//         std::string message;
+// };
+
 int main ()
 {
 #if 1
         std::vector<std::string> results;
         using namespace std::string_literals;
 
-        // int results{};
-
-        auto res = [&results] (const char *const message) {
-                return [&results, message] (auto const &ev) {
-                        results.emplace_back (message);
-                        // results.push_back (ev);
-                        // std::cout << msg << ", " << ev << std::endl;
-                };
-        };
-
-        // auto nes = [&results] (const char *const message) { return [&results, message] () { results.emplace_back (message); }; };
-
+        auto res = [&results] (const char *const message) { return [&results, message] (auto const &ev) { results.emplace_back (message); }; };
+        // auto res = [&results] (std::string message) { return [&results, message] (auto const &ev) { results.push_back (message); }; };
+        auto cmd = [&results] (const char *const message) { return [&results, message] { results.emplace_back (message); }; };
         auto eq = [] (const char *what) { return [what] (auto const &i) -> bool { return i == what; }; };
 
         auto m = machine (
-                state<Name<1>> (entry (res ("INIT entry")), exit (res ("INIT exit")), transition<Name<2>> (eq ("2"), res ("65"), res ("66")))
-#define FULL 0
+                state<Name<1>> (entry (cmd ("INIT entry")), exit (cmd ("INIT exit")), transition<Name<2>> (eq ("2"), res ("65"), res ("66")))
+#define FULL 1
 #if FULL
 
                         ,
-                state<Name<2>> (entry (res ("B entry")), exit (res ("B exit")), transition<Name<1>> (eq ("-3"), res ("action"), res ("another")),
+                state<Name<2>> (entry (cmd ("B entry")), exit (cmd ("B exit")), transition<Name<1>> (eq ("-3"), res ("action"), res ("another")),
                                 transition<Name<3>> (eq ("3"), res ("action"), res ("another"))),
 
-                state<Name<3>> (entry (res ("C entry")), exit (res ("C exit")), transition<Name<2>> (eq ("-4"), res ("action"), res ("another")),
+                state<Name<3>> (entry (cmd ("C entry")), exit (cmd ("C exit")), transition<Name<2>> (eq ("-4"), res ("action"), res ("another")),
                                 transition<Name<4>> (eq ("4"), res ("action"), res ("another"))),
 
-                state<Name<4>> (entry (res ("D entry")), exit (res ("D exit")), transition<Name<3>> (eq ("-5"), res ("action"), res ("another")),
+                state<Name<4>> (entry (cmd ("D entry")), exit (cmd ("D exit")), transition<Name<3>> (eq ("-5"), res ("action"), res ("another")),
                                 transition<Name<5>> (eq ("5"), res ("action"), res ("another"))),
 
-                state<Name<5>> (entry (res ("E entry")), exit (res ("E exit")), transition<Name<4>> (eq ("-6"), res ("action"), res ("another")),
+                state<Name<5>> (entry (cmd ("E entry")), exit (cmd ("E exit")), transition<Name<4>> (eq ("-6"), res ("action"), res ("another")),
                                 transition<Name<6>> (eq ("6"), res ("action"), res ("another"))),
 
-                state<Name<6>> (entry (res ("F entry")), exit (res ("F exit")), transition<Name<5>> (eq ("-7"), res ("action"), res ("another")),
+                state<Name<6>> (entry (cmd ("F entry")), exit (cmd ("F exit")), transition<Name<5>> (eq ("-7"), res ("action"), res ("another")),
                                 transition<Name<7>> (eq ("7"), res ("action"), res ("another"))),
 
-                state<Name<7>> (entry (res ("G entry")), exit (res ("G exit")), transition<Name<6>> (eq ("-8"), res ("action"), res ("another")),
+                state<Name<7>> (entry (cmd ("G entry")), exit (cmd ("G exit")), transition<Name<6>> (eq ("-8"), res ("action"), res ("another")),
                                 transition<Name<8>> (eq ("8"), res ("action"), res ("another"))),
 
-                state<Name<8>> (entry (res ("H entry")), exit (res ("H exit")), transition<Name<7>> (eq ("-9"), res ("action"), res ("another")),
+                state<Name<8>> (entry (cmd ("H entry")), exit (cmd ("H exit")), transition<Name<7>> (eq ("-9"), res ("action"), res ("another")),
                                 transition<Name<9>> (eq ("9"), res ("action"), res ("another"))),
 
-                state<Name<9>> (entry (res ("I entry")), exit (res ("I exit")),
+                state<Name<9>> (entry (cmd ("I entry")), exit (cmd ("I exit")),
                                 transition<Name<8>> (eq ("-10"), res ("action"), res ("another")),
                                 transition<Name<10>> (eq ("10"), res ("action"), res ("another"))),
 
-                state<Name<10>> (entry (res ("J entry")), exit (res ("J exit")),
+                state<Name<10>> (entry (cmd ("J entry")), exit (cmd ("J exit")),
                                  transition<Name<9>> (eq ("-11"), res ("action"), res ("another")),
                                  transition<Name<11>> (eq ("11"), res ("action"), res ("another"))),
 
-                state<Name<11>> (entry (res ("K entry")), exit (res ("K exit")),
+                state<Name<11>> (entry (cmd ("K entry")), exit (cmd ("K exit")),
                                  transition<Name<10>> (eq ("-12"), res ("action"), res ("another")),
                                  transition<Name<12>> (eq ("12"), res ("action"), res ("another"))),
 
-                state<Name<12>> (entry (res ("L entry")), exit (res ("L exit")),
+                state<Name<12>> (entry (cmd ("L entry")), exit (cmd ("L exit")),
                                  transition<Name<11>> (eq ("-13"), res ("action"), res ("another")),
                                  transition<Name<13>> (eq ("13"), res ("action"), res ("another"))),
 
-                state<Name<13>> (entry (res ("M entry")), exit (res ("M exit")),
+                state<Name<13>> (entry (cmd ("M entry")), exit (cmd ("M exit")),
                                  transition<Name<12>> (eq ("-14"), res ("action"), res ("another")),
                                  transition<Name<14>> (eq ("14"), res ("action"), res ("another"))),
 
-                state<Name<14>> (entry (res ("N entry")), exit (res ("N exit")),
+                state<Name<14>> (entry (cmd ("N entry")), exit (cmd ("N exit")),
                                  transition<Name<13>> (eq ("-15"), res ("action"), res ("another")),
                                  transition<Name<15>> (eq ("15"), res ("action"), res ("another"))),
 
-                state<Name<15>> (entry (res ("O entry")), exit (res ("O exit")),
+                state<Name<15>> (entry (cmd ("O entry")), exit (cmd ("O exit")),
                                  transition<Name<14>> (eq ("-16"), res ("action"), res ("another")),
                                  transition<Name<16>> (eq ("16"), res ("action"), res ("another"))),
 
-                state<Name<16>> (entry (res ("FINAL entry")), exit (res ("")),
+                state<Name<16>> (entry (cmd ("FINAL entry")), exit (cmd ("")),
                                  transition<Name<15>> (eq ("-17"), res ("action"), res ("another")),
                                  transition<Name<16>> (eq ("17"), res ("action"), res ("another")))
 #endif
@@ -550,28 +564,28 @@ int main ()
 
 /*
 -O3
-     FILE SIZE        VM SIZE
+    FILE SIZE        VM SIZE
  --------------  --------------
-  49.2%  15.2Ki  75.2%  15.1Ki    .text
-  13.2%  4.07Ki   0.0%       0    [Unmapped]
-   8.3%  2.56Ki   0.0%       0    .strtab
-   6.6%  2.03Ki   0.0%       0    .symtab
-   2.3%     720   3.2%     656    .eh_frame
-   2.2%     689   3.3%     689    [LOAD #2 [R]]
-   2.0%     633   2.8%     569    .dynstr
-   1.9%     592   2.6%     528    .dynamic
-   1.8%     568   2.4%     504    .dynsym
+  46.0%  14.1Ki  73.3%  14.1Ki    .text
+  16.1%  4.97Ki   0.0%       0    [Unmapped]
+   8.0%  2.45Ki   0.0%       0    .strtab
+   6.7%  2.05Ki   0.0%       0    .symtab
+   2.3%     720   3.3%     656    .eh_frame
+   2.2%     691   3.5%     691    [LOAD #2 [R]]
+   2.2%     685   3.2%     621    .dynstr
+   1.9%     592   2.7%     528    .dynamic
+   1.9%     592   2.7%     528    .dynsym
    1.4%     447   1.9%     383    .rodata
-   1.3%     400   1.6%     336    .rela.plt
+   1.3%     424   1.8%     360    .rela.plt
    1.1%     354   0.0%       0    .shstrtab
    1.0%     328   1.3%     264    .rela.dyn
-   1.0%     304   1.2%     240    .plt
-   0.9%     291   1.1%     227    .gcc_except_table
-   0.7%     224   0.8%     160    .gnu.version_r
-   0.6%     200   0.7%     136    .got.plt
-   0.5%     156   0.4%      92    .eh_frame_hdr
+   1.0%     320   1.3%     256    .plt
+   0.9%     291   1.2%     227    .gcc_except_table
+   0.8%     240   0.9%     176    .gnu.version_r
+   0.7%     208   0.7%     144    .got.plt
+   0.5%     156   0.5%      92    .eh_frame_hdr
    0.4%     128   0.0%       0    [ELF Headers]
-   0.3%     106   0.2%      42    .gnu.version
+   0.3%     108   0.2%      44    .gnu.version
    0.3%     104   0.2%      40    .got
    0.3%     100   0.2%      36    .note.gnu.build-id
    0.3%      96   0.2%      32    .note.ABI-tag
@@ -587,7 +601,7 @@ int main ()
    0.0%       0   0.0%       8    .bss
    0.0%       8   0.0%       8    [LOAD #3 [RX]]
    0.0%       5   0.0%       5    [LOAD #4 [R]]
- 100.0%  30.9Ki 100.0%  20.1Ki    TOTAL
+ 100.0%  30.8Ki 100.0%  19.2Ki    TOTAL
 
 
 -O0 stripped

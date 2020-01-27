@@ -218,13 +218,13 @@ m->state (AT_QBTGATSREG)->entry (at ("AT+QBTGATSREG=1,\"ABC2\"\r\n"))
 ## First attepmpt (new)
 Both state collection and the algorithm was template generated i.e. all the states and their internals were hana::tuples. Compile time iteration over compile time collections was implemented. Implication is that I couldn't store intermediate results between ```Machine::run``` calls because I would never know what is it's type (i.e. current state type). The way it worked in case of a delay action is it had to find the current state at the beginning of every run method call. So the drawback was : executable was big, and ran slower than the old version because the current state had to be found every time the ```Machine::run``` was run even though it was found in the previous run.
 
-### First attempt analysis (of output binary size)
+### Output binary size analysis (of first attempt)
 I reimplemented this from the start the other day and carefully obseved how output binary size increased after each slight change. 
 
-Most size increase came from to **many nested iterations** over std::tuples. At some point I had this nesting:
+Most size increase came from too **many nested iterations** over std::tuples. At some point I had this nesting:
 
 * For every state - check if this state is the "current state" (16 states).
-  * For every transition -  check its condition (2 transitions for every state)
+  * For every transition - check its condition (2 transitions for every state)
     * For every state - find current state and run its exit actrions (16)
     * For every state - find the state we are transitioning to and run its entry actions (16)
 
@@ -235,6 +235,31 @@ After reducing the nesting to only 2 levels (16*2) size dropped drastically (to 
 Next code bloat came from **chainging the event type from int to std::string**. After this the output size increased 10 times from 22Ki to 233Ki. I cannot get lower than 230Ki whatever approach I used (-O3 wise).
 
 Then I noticed third issue (well mistake actually) that I passed ```const char *``` as an event even though conditions and actions worked on ```std::strings```. This generated lots of additional conversions. Simply adding a "s" suffix reduced the output even further. 
+
+Lastly the actions itself has huge impact on binary size. And this is very important to remember because this is the user who writes them. But I don't understand it throughly. For example these implementations of ```ref``` used in ```tupleTest``` yelds different binary sizes :
+
+```cpp
+class res {
+public:
+        res (std::string m) : message (std::move (m)) {}
+        void operator() (std::string const &) { results2.push_back (message); } // 98.4Ki (-O3 not stripped)
+
+private:
+        std::string message;
+};
+```
+
+Lambdas do better.
+
+```cpp
+auto res = [&results] (std::string const &message) { return [&results, message] { results.push_back (message); }; }; // ~75Ki
+```
+
+Eliminating std::string gives the best results:
+
+```cpp
+auto res = [&results] (const char *const message) { return [&results, message] (auto const &ev) { results.emplace_back (message); }; }; // 30.8Ki
+```
 
 I also found it difficult to get track of all the measurements which I made after every slight change for -O3, -O0 and -O0-stripped versions. I easilly got confused and compared wrong measurements. Another thing I didn't know is that even -O3 binary can be stripped. In my case ```.strtab``` and ```.symtab``` sections shrank and I got more tnah 50% savings.
 
