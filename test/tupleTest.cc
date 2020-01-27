@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <iostream>
 #endif
@@ -69,18 +69,25 @@ template <typename Sn, typename EntT, typename TraT, typename ExiT> struct State
         ExiT exitActions;
 };
 
+template <typename Ev, typename... Acts> inline void runActions (Ev const &ev, std::tuple<Acts...> &actions)
+{
+        std::apply ([&ev] (auto &... action) { (action (ev), ...); }, actions);
+}
+
+template <typename Ev, typename Act> inline void runActions (Ev const &ev, Act &action) { action (ev); }
+
 template <typename Sn, typename EntT, typename TraT, typename ExiT>
 template <typename Ev>
 void State<Sn, EntT, TraT, ExiT>::runEntry (Ev const &ev)
 {
-        std::apply ([&ev] (auto &... entryAction) { (entryAction (ev), ...); }, entryActions);
+        runActions (ev, entryActions);
 }
 
 template <typename Sn, typename EntT, typename TraT, typename ExiT>
 template <typename Ev>
 void State<Sn, EntT, TraT, ExiT>::runExit (Ev const &ev)
 {
-        std::apply ([&ev] (auto &... exitAction) { (exitAction (ev), ...); }, exitActions);
+        runActions (ev, exitActions);
 }
 
 // template <typename Sn, typename EntT, typename TraT, typename ExiT> auto state (EntT &&en, TraT &&tra, ExiT &&ex)
@@ -94,8 +101,11 @@ template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state
                                                                            std::forward<ExiT> (ex));
 }
 
-template <typename... Act> constexpr auto entry (Act &&... act) { return std::make_tuple (act...); }
+template <typename... Acts> constexpr auto entry (Acts &&... act) { return std::make_tuple (act...); }
+template <typename Act> constexpr auto entry (Act &&act) { return std::forward<Act> (act); }
+
 template <typename... Act> constexpr auto exit (Act &&... act) { return std::make_tuple (act...); }
+template <typename Act> constexpr auto exit (Act &&act) { return std::forward<Act> (act); }
 
 /****************************************************************************/
 
@@ -269,7 +279,7 @@ int main ()
                 };
         };
 
-        auto eq = [] (std::string const &what) { return [what] (auto const &i) -> bool { return i == what; }; };
+        auto eq = [] (const char *what) { return [what] (auto const &i) -> bool { return i == what; }; };
 
         auto m = machine (
                 state<Name<1>> (entry (res ("INIT entry")), exit (res ("INIT exit")), transition<Name<2>> (eq ("2"), res ("65"), res ("66")))
@@ -521,120 +531,81 @@ int main ()
 
 /*
 -O3
+     FILE SIZE        VM SIZE
+ --------------  --------------
+  49.2%  15.2Ki  75.2%  15.1Ki    .text
+  13.2%  4.07Ki   0.0%       0    [Unmapped]
+   8.3%  2.56Ki   0.0%       0    .strtab
+   6.6%  2.03Ki   0.0%       0    .symtab
+   2.3%     720   3.2%     656    .eh_frame
+   2.2%     689   3.3%     689    [LOAD #2 [R]]
+   2.0%     633   2.8%     569    .dynstr
+   1.9%     592   2.6%     528    .dynamic
+   1.8%     568   2.4%     504    .dynsym
+   1.4%     447   1.9%     383    .rodata
+   1.3%     400   1.6%     336    .rela.plt
+   1.1%     354   0.0%       0    .shstrtab
+   1.0%     328   1.3%     264    .rela.dyn
+   1.0%     304   1.2%     240    .plt
+   0.9%     291   1.1%     227    .gcc_except_table
+   0.7%     224   0.8%     160    .gnu.version_r
+   0.6%     200   0.7%     136    .got.plt
+   0.5%     156   0.4%      92    .eh_frame_hdr
+   0.4%     128   0.0%       0    [ELF Headers]
+   0.3%     106   0.2%      42    .gnu.version
+   0.3%     104   0.2%      40    .got
+   0.3%     100   0.2%      36    .note.gnu.build-id
+   0.3%      96   0.2%      32    .note.ABI-tag
+   0.3%      92   0.1%      28    .gnu.hash
+   0.3%      92   0.1%      28    .interp
+   0.3%      91   0.1%      27    .init
+   0.3%      81   0.0%       0    .comment
+   0.3%      80   0.1%      16    .data
+   0.3%      80   0.1%      16    .data.rel.ro
+   0.2%      77   0.1%      13    .fini
+   0.2%      72   0.0%       8    .fini_array
+   0.2%      72   0.0%       8    .init_array
+   0.0%       0   0.0%       8    .bss
+   0.0%       8   0.0%       8    [LOAD #3 [RX]]
+   0.0%       5   0.0%       5    [LOAD #4 [R]]
+ 100.0%  30.9Ki 100.0%  20.1Ki    TOTAL
+
+
+-O0 stripped
     FILE SIZE        VM SIZE
  --------------  --------------
-  76.9%  75.5Ki  80.5%  75.4Ki    .text
-   7.7%  7.60Ki   8.0%  7.54Ki    .eh_frame
-   5.6%  5.46Ki   5.8%  5.40Ki    .gcc_except_table
-   2.5%  2.45Ki   0.0%       0    [Unmapped]
-   1.5%  1.50Ki   1.5%  1.43Ki    .eh_frame_hdr
-   0.7%     685   0.7%     685    [LOAD #2 [R]]
-   0.6%     592   0.6%     528    .dynamic
-   0.6%     573   0.5%     509    .dynstr
-   0.6%     568   0.5%     504    .dynsym
-   0.4%     441   0.4%     377    .rodata
-   0.4%     400   0.4%     336    .rela.plt
-   0.3%     325   0.0%       0    .shstrtab
-   0.3%     304   0.3%     240    .plt
-   0.3%     280   0.2%     216    .rela.dyn
-   0.2%     224   0.2%     160    .gnu.version_r
-   0.2%     200   0.1%     136    .got.plt
+  56.6%  82.8Ki  60.4%  82.8Ki    .text
+  26.3%  38.4Ki  28.0%  38.3Ki    .eh_frame
+   6.3%  9.26Ki   6.7%  9.20Ki    .eh_frame_hdr
+   4.9%  7.22Ki   0.0%       0    [Unmapped]
+   1.0%  1.50Ki   1.1%  1.44Ki    .dynstr
+   0.6%     928   0.6%     864    .dynsym
+   0.6%     839   0.6%     775    .gcc_except_table
+   0.5%     736   0.5%     672    .rela.plt
+   0.5%     688   0.5%     688    [LOAD #2 [R]]
+   0.4%     592   0.4%     528    .dynamic
+   0.4%     556   0.4%     492    .rodata
+   0.4%     528   0.3%     464    .plt
+   0.2%     325   0.0%       0    .shstrtab
+   0.2%     312   0.2%     248    .got.plt
+   0.2%     280   0.2%     216    .rela.dyn
+   0.1%     208   0.1%     144    .gnu.version_r
+   0.1%     136   0.1%      72    .gnu.version
    0.1%     128   0.0%       0    [ELF Headers]
-   0.1%     106   0.0%      42    .gnu.version
    0.1%     104   0.0%      40    .got
+   0.1%     100   0.0%      36    .gnu.hash
    0.1%     100   0.0%      36    .note.gnu.build-id
    0.1%      96   0.0%      32    .note.ABI-tag
-   0.1%      92   0.0%      28    .gnu.hash
    0.1%      92   0.0%      28    .interp
    0.1%      91   0.0%      27    .init
    0.1%      81   0.0%       0    .comment
    0.1%      80   0.0%      16    .data
    0.1%      77   0.0%      13    .fini
-   0.1%      72   0.0%       8    .fini_array
-   0.1%      72   0.0%       8    .init_array
-   0.0%       0   0.0%       8    .bss
-   0.0%       8   0.0%       8    [LOAD #3 [RX]]
-   0.0%       3   0.0%       3    [LOAD #4 [R]]
- 100.0%  98.2Ki 100.0%  93.7Ki    TOTAL
-
--O0 stripped
-    FILE SIZE        VM SIZE
- --------------  --------------
-  61.0%   130Ki  63.5%   130Ki    .text
-  23.6%  50.5Ki  24.5%  50.4Ki    .eh_frame
-   5.7%  12.1Ki   5.9%  12.1Ki    .eh_frame_hdr
-   3.0%  6.50Ki   3.1%  6.43Ki    .gcc_except_table
-   3.0%  6.35Ki   0.0%       0    [Unmapped]
-   0.8%  1.63Ki   0.8%  1.56Ki    .dynstr
-   0.5%    1000   0.4%     936    .dynsym
-   0.4%     808   0.4%     744    .rela.plt
-   0.3%     684   0.3%     684    [LOAD #2 [R]]
-   0.3%     592   0.3%     528    .dynamic
-   0.3%     576   0.2%     512    .plt
-   0.3%     556   0.2%     492    .rodata
-   0.2%     336   0.1%     272    .got.plt
-   0.1%     325   0.0%       0    .shstrtab
-   0.1%     280   0.1%     216    .rela.dyn
-   0.1%     208   0.1%     144    .gnu.version_r
-   0.1%     142   0.0%      78    .gnu.version
-   0.1%     128   0.0%       0    [ELF Headers]
-   0.0%     104   0.0%      40    .got
-   0.0%     100   0.0%      36    .gnu.hash
-   0.0%     100   0.0%      36    .note.gnu.build-id
-   0.0%      96   0.0%      32    .note.ABI-tag
-   0.0%      92   0.0%      28    .interp
-   0.0%      91   0.0%      27    .init
-   0.0%      81   0.0%       0    .comment
-   0.0%      80   0.0%      16    .data
-   0.0%      77   0.0%      13    .fini
    0.0%      72   0.0%       8    .fini_array
    0.0%      72   0.0%       8    .init_array
    0.0%       0   0.0%       8    .bss
    0.0%       8   0.0%       8    [LOAD #3 [RX]]
- 100.0%   214Ki 100.0%   205Ki    TOTAL
+ 100.0%   146Ki 100.0%   137Ki    TOTAL
 
-
-   FILE SIZE        VM SIZE
- --------------  --------------
-  72.5%  3.34Mi   0.0%       0    .debug_str
-  13.4%   632Ki   0.0%       0    .strtab
-   6.3%   298Ki   0.0%       0    .debug_info
-   2.8%   130Ki  63.5%   130Ki    .text
-   1.3%  59.4Ki   0.0%       0    .debug_line
-   1.1%  50.5Ki  24.5%  50.4Ki    .eh_frame
-   0.9%  42.5Ki   0.0%       0    .symtab
-   0.5%  24.2Ki   0.0%       0    .debug_ranges
-   0.5%  24.1Ki   0.0%       0    .debug_aranges
-   0.3%  12.1Ki   5.9%  12.1Ki    .eh_frame_hdr
-   0.1%  6.50Ki   3.1%  6.43Ki    .gcc_except_table
-   0.1%  6.36Ki   0.0%       0    [Unmapped]
-   0.1%  4.34Ki   0.0%       0    .debug_abbrev
-   0.0%  1.63Ki   0.8%  1.56Ki    .dynstr
-   0.0%    1000   0.4%     936    .dynsym
-   0.0%     808   0.4%     744    .rela.plt
-   0.0%     684   0.3%     684    [LOAD #2 [R]]
-   0.0%     592   0.3%     528    .dynamic
-   0.0%     576   0.2%     512    .plt
-   0.0%     556   0.2%     492    .rodata
-   0.0%     419   0.0%       0    .shstrtab
-   0.0%     336   0.1%     272    .got.plt
-   0.0%     280   0.1%     216    .rela.dyn
-   0.0%     208   0.1%     144    .gnu.version_r
-   0.0%     142   0.0%      78    .gnu.version
-   0.0%     128   0.0%       0    [ELF Headers]
-   0.0%     104   0.0%      40    .got
-   0.0%     100   0.0%      36    .gnu.hash
-   0.0%     100   0.0%      36    .note.gnu.build-id
-   0.0%      96   0.0%      32    .note.ABI-tag
-   0.0%      92   0.0%      28    .interp
-   0.0%      91   0.0%      27    .init
-   0.0%      81   0.0%       0    .comment
-   0.0%      80   0.0%      16    .data
-   0.0%      77   0.0%      13    .fini
-   0.0%      72   0.0%       8    .fini_array
-   0.0%      72   0.0%       8    .init_array
-   0.0%       0   0.0%       8    .bss
-   0.0%       8   0.0%       8    [LOAD #3 [RX]]
- 100.0%  4.61Mi 100.0%   205Ki    TOTAL
 
 */
