@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <iostream>
 #endif
@@ -37,9 +37,15 @@ template <typename Sn, typename Con, typename TacT> template <typename Ev> void 
         std::apply ([&ev] (auto &... transitionAction) { (transitionAction (ev), ...); }, transitionActions);
 }
 
-template <typename Sn, typename Con, typename TacT> auto transition (Con &&condition, TacT &&actions)
+// template <typename Sn, typename Con, typename TacT> auto transition (Con &&condition, TacT &&actions)
+// {
+//         return Transition<Sn, Con, TacT> (std::forward<Con> (condition), std::forward<TacT> (actions));
+// }
+
+template <typename Sn, typename Con, typename... Tac> auto transition (Con &&condition, Tac &&... actions)
 {
-        return Transition<Sn, Con, TacT> (std::forward<Con> (condition), std::forward<TacT> (actions));
+        return Transition<Sn, Con, decltype (std::forward_as_tuple (actions...))> (std::forward<Con> (condition),
+                                                                                   std::forward_as_tuple (actions...));
 }
 
 /****************************************************************************/
@@ -78,10 +84,19 @@ void State<Sn, EntT, TraT, ExiT>::runExit (Ev const &ev)
         std::apply ([&ev] (auto &... exitAction) { (exitAction (ev), ...); }, exitActions);
 }
 
-template <typename Sn, typename EntT, typename TraT, typename ExiT> auto state (EntT &&en, TraT &&tra, ExiT &&ex)
+// template <typename Sn, typename EntT, typename TraT, typename ExiT> auto state (EntT &&en, TraT &&tra, ExiT &&ex)
+// {
+//         return State<Sn, EntT, TraT, ExiT> (std::forward<EntT> (en), std::forward<TraT> (tra), std::forward<ExiT> (ex));
+// }
+
+template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state (EntT &&en, ExiT &&ex, Tra &&... tra)
 {
-        return State<Sn, EntT, TraT, ExiT> (std::forward<EntT> (en), std::forward<TraT> (tra), std::forward<ExiT> (ex));
+        return State<Sn, EntT, decltype (std::forward_as_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::forward_as_tuple (tra...),
+                                                                                 std::forward<ExiT> (ex));
 }
+
+template <typename... Act> constexpr auto entry (Act &&... act) { return std::forward_as_tuple (act...); }
+template <typename... Act> constexpr auto exit (Act &&... act) { return std::forward_as_tuple (act...); }
 
 /****************************************************************************/
 
@@ -98,19 +113,9 @@ template <typename StaT> struct Machine {
         int currentStateIndex{1};
 };
 
+template <typename... Sta> constexpr auto machine (Sta &&... states) { return Machine (std::forward_as_tuple (states...)); }
+
 namespace impl {
-template <typename Sta, typename Fun> auto runIfCurrentState (int current, Fun &&fun)
-{
-        return [&fun, current] (auto &state) {
-                if (Sta::Name::getIndex () == current) {
-                        fun (state);
-                        return true;
-                }
-
-                return false;
-        };
-}
-
 template <typename Fun, typename Sta, typename... Rst> void runIfCurrentState2 (int current, Fun &&fun, Sta &state, Rst &... rest)
 {
         if (Sta::Name::getIndex () == current) {
@@ -128,29 +133,11 @@ template <typename Fun, typename Sta, typename... Rst> void runIfCurrentState2 (
 template <typename StaT> template <typename Fun> void Machine<StaT>::forCurrentState (Fun &&function)
 {
         std::apply (
-                [&function, this] (auto &... state) {
-                        // (impl::runIfCurrentState<std::remove_reference_t<decltype (state)>> (currentStateIndex,
-                        //                                                                      std::forward<Fun> (function)) (state)
-                        //  || ...);
-
-                        impl::runIfCurrentState2 (currentStateIndex, std::forward<Fun> (function), state...);
-                },
+                [&function, this] (auto &... state) { impl::runIfCurrentState2 (currentStateIndex, std::forward<Fun> (function), state...); },
                 states);
 }
 
 namespace impl {
-template <typename Tra, typename Fun> auto runIfMatchingTransition (Tra &transition, Fun &&fun)
-{
-        return [&fun, &transition] (auto const &ev) {
-                if (transition.condition (ev)) {
-                        fun (transition);
-                        return true;
-                }
-
-                return false;
-        };
-}
-
 template <typename Fun, typename Ev, typename Tra, typename... Rst>
 void runIfMatchingTransition2 (Fun &&fun, Ev const &ev, Tra &transition, Rst &... rest)
 {
@@ -168,10 +155,7 @@ void runIfMatchingTransition2 (Fun &&fun, Ev const &ev, Tra &transition, Rst &..
 template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (Ev const &ev, TraT &transitions, Fun &&function)
 {
         std::apply (
-                [&ev, &function] (auto &... transition) {
-                        //(impl::runIfMatchingTransition (transition, std::forward<Fun> (function)) (ev) || ...);
-                        impl::runIfMatchingTransition2 (std::forward<Fun> (function), ev, transition...);
-                },
+                [&ev, &function] (auto &... transition) { impl::runIfMatchingTransition2 (std::forward<Fun> (function), ev, transition...); },
                 transitions);
 }
 
@@ -287,89 +271,66 @@ int main ()
 
         auto eq = [] (std::string const &what) { return [what] (auto const &i) -> bool { return i == what; }; };
 
-        auto m = Machine (std::make_tuple (
-                state<Name<1>> (std::make_tuple (res ("INIT entry")),
-                                std::make_tuple (transition<Name<2>> (eq ("2"), std::make_tuple (res ("65"), res ("66")))),
-                                std::make_tuple (res ("INIT exit")))
+        auto m = machine (
+                state<Name<1>> (entry (res ("INIT entry")), exit (res ("INIT exit")), transition<Name<2>> (eq ("2"), res ("65"), res ("66")))
 #define FULL 1
 #if FULL
+
                         ,
-                state<Name<2>> (std::make_tuple (res ("B entry")),
-                                std::make_tuple (transition<Name<1>> (eq ("-3"), std::make_tuple (res ("action"), res ("another"))),
-                                                 transition<Name<3>> (eq ("3"), std::make_tuple (res ("action"), res ("another")))),
-                                std::make_tuple (res ("B exit"))),
+                state<Name<2>> (entry (res ("B entry")), exit (res ("B exit")), transition<Name<1>> (eq ("-3"), res ("action"), res ("another")),
+                                transition<Name<3>> (eq ("3"), res ("action"), res ("another"))),
 
-                state<Name<3>> (std::make_tuple (res ("C entry")),
-                                std::make_tuple (transition<Name<2>> (eq ("-4"), std::make_tuple (res ("action"), res ("another"))),
-                                                 transition<Name<4>> (eq ("4"), std::make_tuple (res ("action"), res ("another")))),
-                                std::make_tuple (res ("C exit"))),
+                state<Name<3>> (entry (res ("C entry")), exit (res ("C exit")), transition<Name<2>> (eq ("-4"), res ("action"), res ("another")),
+                                transition<Name<4>> (eq ("4"), res ("action"), res ("another"))),
 
-                state<Name<4>> (std::make_tuple (res ("D entry")),
-                                std::make_tuple (transition<Name<3>> (eq ("-5"), std::make_tuple (res ("action"), res ("another"))),
-                                                 transition<Name<5>> (eq ("5"), std::make_tuple (res ("action"), res ("another")))),
-                                std::make_tuple (res ("D exit"))),
+                state<Name<4>> (entry (res ("D entry")), exit (res ("D exit")), transition<Name<3>> (eq ("-5"), res ("action"), res ("another")),
+                                transition<Name<5>> (eq ("5"), res ("action"), res ("another"))),
 
-                state<Name<5>> (std::make_tuple (res ("E entry")),
-                                std::make_tuple (transition<Name<4>> (eq ("-6"), std::make_tuple (res ("action"), res ("another"))),
-                                                 transition<Name<6>> (eq ("6"), std::make_tuple (res ("action"), res ("another")))),
-                                std::make_tuple (res ("E exit"))),
+                state<Name<5>> (entry (res ("E entry")), exit (res ("E exit")), transition<Name<4>> (eq ("-6"), res ("action"), res ("another")),
+                                transition<Name<6>> (eq ("6"), res ("action"), res ("another"))),
 
-                state<Name<6>> (std::make_tuple (res ("F entry")),
-                                std::make_tuple (transition<Name<5>> (eq ("-7"), std::make_tuple (res ("action"), res ("another"))),
-                                                 transition<Name<7>> (eq ("7"), std::make_tuple (res ("action"), res ("another")))),
-                                std::make_tuple (res ("F exit"))),
+                state<Name<6>> (entry (res ("F entry")), exit (res ("F exit")), transition<Name<5>> (eq ("-7"), res ("action"), res ("another")),
+                                transition<Name<7>> (eq ("7"), res ("action"), res ("another"))),
 
-                state<Name<7>> (std::make_tuple (res ("G entry")),
-                                std::make_tuple (transition<Name<6>> (eq ("-8"), std::make_tuple (res ("action"), res ("another"))),
-                                                 transition<Name<8>> (eq ("8"), std::make_tuple (res ("action"), res ("another")))),
-                                std::make_tuple (res ("G exit"))),
+                state<Name<7>> (entry (res ("G entry")), exit (res ("G exit")), transition<Name<6>> (eq ("-8"), res ("action"), res ("another")),
+                                transition<Name<8>> (eq ("8"), res ("action"), res ("another"))),
 
-                state<Name<8>> (std::make_tuple (res ("H entry")),
-                                std::make_tuple (transition<Name<7>> (eq ("-9"), std::make_tuple (res ("action"), res ("another"))),
-                                                 transition<Name<9>> (eq ("9"), std::make_tuple (res ("action"), res ("another")))),
-                                std::make_tuple (res ("H exit"))),
+                state<Name<8>> (entry (res ("H entry")), exit (res ("H exit")), transition<Name<7>> (eq ("-9"), res ("action"), res ("another")),
+                                transition<Name<9>> (eq ("9"), res ("action"), res ("another"))),
 
-                state<Name<9>> (std::make_tuple (res ("I entry")),
-                                std::make_tuple (transition<Name<8>> (eq ("-10"), std::make_tuple (res ("action"), res ("another"))),
-                                                 transition<Name<10>> (eq ("10"), std::make_tuple (res ("action"), res ("another")))),
-                                std::make_tuple (res ("I exit"))),
+                state<Name<9>> (entry (res ("I entry")), exit (res ("I exit")),
+                                transition<Name<8>> (eq ("-10"), res ("action"), res ("another")),
+                                transition<Name<10>> (eq ("10"), res ("action"), res ("another"))),
 
-                state<Name<10>> (std::make_tuple (res ("J entry")),
-                                 std::make_tuple (transition<Name<9>> (eq ("-11"), std::make_tuple (res ("action"), res ("another"))),
-                                                  transition<Name<11>> (eq ("11"), std::make_tuple (res ("action"), res ("another")))),
-                                 std::make_tuple (res ("J exit"))),
+                state<Name<10>> (entry (res ("J entry")), exit (res ("J exit")),
+                                 transition<Name<9>> (eq ("-11"), res ("action"), res ("another")),
+                                 transition<Name<11>> (eq ("11"), res ("action"), res ("another"))),
 
-                state<Name<11>> (std::make_tuple (res ("K entry")),
-                                 std::make_tuple (transition<Name<10>> (eq ("-12"), std::make_tuple (res ("action"), res ("another"))),
-                                                  transition<Name<12>> (eq ("12"), std::make_tuple (res ("action"), res ("another")))),
-                                 std::make_tuple (res ("K exit"))),
+                state<Name<11>> (entry (res ("K entry")), exit (res ("K exit")),
+                                 transition<Name<10>> (eq ("-12"), res ("action"), res ("another")),
+                                 transition<Name<12>> (eq ("12"), res ("action"), res ("another"))),
 
-                state<Name<12>> (std::make_tuple (res ("L entry")),
-                                 std::make_tuple (transition<Name<11>> (eq ("-13"), std::make_tuple (res ("action"), res ("another"))),
-                                                  transition<Name<13>> (eq ("13"), std::make_tuple (res ("action"), res ("another")))),
-                                 std::make_tuple (res ("L exit"))),
+                state<Name<12>> (entry (res ("L entry")), exit (res ("L exit")),
+                                 transition<Name<11>> (eq ("-13"), res ("action"), res ("another")),
+                                 transition<Name<13>> (eq ("13"), res ("action"), res ("another"))),
 
-                state<Name<13>> (std::make_tuple (res ("M entry")),
-                                 std::make_tuple (transition<Name<12>> (eq ("-14"), std::make_tuple (res ("action"), res ("another"))),
-                                                  transition<Name<14>> (eq ("14"), std::make_tuple (res ("action"), res ("another")))),
-                                 std::make_tuple (res ("M exit"))),
+                state<Name<13>> (entry (res ("M entry")), exit (res ("M exit")),
+                                 transition<Name<12>> (eq ("-14"), res ("action"), res ("another")),
+                                 transition<Name<14>> (eq ("14"), res ("action"), res ("another"))),
 
-                state<Name<14>> (std::make_tuple (res ("N entry")),
-                                 std::make_tuple (transition<Name<13>> (eq ("-15"), std::make_tuple (res ("action"), res ("another"))),
-                                                  transition<Name<15>> (eq ("15"), std::make_tuple (res ("action"), res ("another")))),
-                                 std::make_tuple (res ("N exit"))),
+                state<Name<14>> (entry (res ("N entry")), exit (res ("N exit")),
+                                 transition<Name<13>> (eq ("-15"), res ("action"), res ("another")),
+                                 transition<Name<15>> (eq ("15"), res ("action"), res ("another"))),
 
-                state<Name<15>> (std::make_tuple (res ("O entry")),
-                                 std::make_tuple (transition<Name<14>> (eq ("-16"), std::make_tuple (res ("action"), res ("another"))),
-                                                  transition<Name<16>> (eq ("16"), std::make_tuple (res ("action"), res ("another")))),
-                                 std::make_tuple (res ("O exit"))),
+                state<Name<15>> (entry (res ("O entry")), exit (res ("O exit")),
+                                 transition<Name<14>> (eq ("-16"), res ("action"), res ("another")),
+                                 transition<Name<16>> (eq ("16"), res ("action"), res ("another"))),
 
-                state<Name<16>> (std::make_tuple (res ("FINAL entry")),
-                                 std::make_tuple (transition<Name<15>> (eq ("-17"), std::make_tuple (res ("action"), res ("another"))),
-                                                  transition<Name<16>> (eq ("17"), std::make_tuple (res ("action"), res ("another")))),
-                                 std::make_tuple (res ("")))
+                state<Name<16>> (entry (res ("FINAL entry")), exit (res ("")),
+                                 transition<Name<15>> (eq ("-17"), res ("action"), res ("another")),
+                                 transition<Name<16>> (eq ("17"), res ("action"), res ("another")))
 #endif
-                        ));
+        );
 
         m.run ("1"s); // TODO already in init state
         assert (m.currentStateIndex == 1);
@@ -426,87 +387,87 @@ int main ()
         auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
 
         auto m = Machine (
-                std::make_tuple (state<Name<1>> (std::make_tuple (res (1), res (2)),
-                                                 std::make_tuple (transition<Name<1>> (eq (-2), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<2>> (eq (2), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (3), res (4)))
+                state<Name<1>> (res (1), res (2),
+                                                 transition<Name<1>> (eq (-2), res (65), res (66)),
+                                                                  transition<Name<2>> (eq (2), res (65), res (66))),
+                                                 res (3), res (4))
 #define FULL 1
 #if FULL
                                          ,
-                                 state<Name<2>> (std::make_tuple (res (5), res (6)),
-                                                 std::make_tuple (transition<Name<1>> (eq (-3), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<3>> (eq (3), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (7), res (8))),
+                                 state<Name<2>> (res (5), res (6),
+                                                 transition<Name<1>> (eq (-3), res (65), res (66)),
+                                                                  transition<Name<3>> (eq (3), res (65), res (66))),
+                                                 res (7), res (8)),
 
-                                 state<Name<3>> (std::make_tuple (res (9), res (10)),
-                                                 std::make_tuple (transition<Name<2>> (eq (-4), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<4>> (eq (4), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (11), res (12))),
+                                 state<Name<3>> (res (9), res (10),
+                                                 transition<Name<2>> (eq (-4), res (65), res (66)),
+                                                                  transition<Name<4>> (eq (4), res (65), res (66))),
+                                                 res (11), res (12)),
 
-                                 state<Name<4>> (std::make_tuple (res (13), res (14)),
-                                                 std::make_tuple (transition<Name<3>> (eq (-5), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<5>> (eq (5), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (15), res (16))),
+                                 state<Name<4>> (res (13), res (14),
+                                                 transition<Name<3>> (eq (-5), res (65), res (66)),
+                                                                  transition<Name<5>> (eq (5), res (65), res (66))),
+                                                 res (15), res (16)),
 
-                                 state<Name<5>> (std::make_tuple (res (17), res (18)),
-                                                 std::make_tuple (transition<Name<4>> (eq (-6), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<6>> (eq (6), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (19), res (20))),
+                                 state<Name<5>> (res (17), res (18),
+                                                 transition<Name<4>> (eq (-6), res (65), res (66)),
+                                                                  transition<Name<6>> (eq (6), res (65), res (66))),
+                                                 res (19), res (20)),
 
-                                 state<Name<6>> (std::make_tuple (res (21), res (22)),
-                                                 std::make_tuple (transition<Name<5>> (eq (-7), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<7>> (eq (7), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (23), res (24))),
+                                 state<Name<6>> (res (21), res (22),
+                                                 transition<Name<5>> (eq (-7), res (65), res (66)),
+                                                                  transition<Name<7>> (eq (7), res (65), res (66))),
+                                                 res (23), res (24)),
 
-                                 state<Name<7>> (std::make_tuple (res (25), res (26)),
-                                                 std::make_tuple (transition<Name<6>> (eq (-8), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<8>> (eq (8), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (27), res (28))),
+                                 state<Name<7>> (res (25), res (26),
+                                                 transition<Name<6>> (eq (-8), res (65), res (66)),
+                                                                  transition<Name<8>> (eq (8), res (65), res (66))),
+                                                 res (27), res (28)),
 
-                                 state<Name<8>> (std::make_tuple (res (29), res (30)),
-                                                 std::make_tuple (transition<Name<7>> (eq (-9), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<9>> (eq (9), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (31), res (32))),
+                                 state<Name<8>> (res (29), res (30),
+                                                 transition<Name<7>> (eq (-9), res (65), res (66)),
+                                                                  transition<Name<9>> (eq (9), res (65), res (66))),
+                                                 res (31), res (32)),
 
-                                 state<Name<9>> (std::make_tuple (res (33), res (34)),
-                                                 std::make_tuple (transition<Name<8>> (eq (-10), std::make_tuple (res (65), res (66))),
-                                                                  transition<Name<10>> (eq (10), std::make_tuple (res (65), res (66)))),
-                                                 std::make_tuple (res (35), res (36))),
+                                 state<Name<9>> (res (33), res (34),
+                                                 transition<Name<8>> (eq (-10), res (65), res (66)),
+                                                                  transition<Name<10>> (eq (10), res (65), res (66))),
+                                                 res (35), res (36)),
 
-                                 state<Name<10>> (std::make_tuple (res (37), res (38)),
-                                                  std::make_tuple (transition<Name<9>> (eq (-11), std::make_tuple (res (65), res (66))),
-                                                                   transition<Name<11>> (eq (11), std::make_tuple (res (65), res (66)))),
-                                                  std::make_tuple (res (39), res (40))),
+                                 state<Name<10>> (res (37), res (38),
+                                                  transition<Name<9>> (eq (-11), res (65), res (66)),
+                                                                   transition<Name<11>> (eq (11), res (65), res (66))),
+                                                  res (39), res (40)),
 
-                                 state<Name<11>> (std::make_tuple (res (41), res (42)),
-                                                  std::make_tuple (transition<Name<10>> (eq (-12), std::make_tuple (res (65), res (66))),
-                                                                   transition<Name<12>> (eq (12), std::make_tuple (res (65), res (66)))),
-                                                  std::make_tuple (res (43), res (44))),
+                                 state<Name<11>> (res (41), res (42),
+                                                  transition<Name<10>> (eq (-12), res (65), res (66)),
+                                                                   transition<Name<12>> (eq (12), res (65), res (66))),
+                                                  res (43), res (44)),
 
-                                 state<Name<12>> (std::make_tuple (res (45), res (46)),
-                                                  std::make_tuple (transition<Name<11>> (eq (-13), std::make_tuple (res (65), res (66))),
-                                                                   transition<Name<13>> (eq (13), std::make_tuple (res (65), res (66)))),
-                                                  std::make_tuple (res (47), res (48))),
+                                 state<Name<12>> (res (45), res (46),
+                                                  transition<Name<11>> (eq (-13), res (65), res (66)),
+                                                                   transition<Name<13>> (eq (13), res (65), res (66))),
+                                                  res (47), res (48)),
 
-                                 state<Name<13>> (std::make_tuple (res (49), res (50)),
-                                                  std::make_tuple (transition<Name<12>> (eq (-14), std::make_tuple (res (65), res (66))),
-                                                                   transition<Name<14>> (eq (14), std::make_tuple (res (65), res (66)))),
-                                                  std::make_tuple (res (51), res (52))),
+                                 state<Name<13>> (res (49), res (50),
+                                                  transition<Name<12>> (eq (-14), res (65), res (66)),
+                                                                   transition<Name<14>> (eq (14), res (65), res (66))),
+                                                  res (51), res (52)),
 
-                                 state<Name<14>> (std::make_tuple (res (53), res (54)),
-                                                  std::make_tuple (transition<Name<13>> (eq (-15), std::make_tuple (res (65), res (66))),
-                                                                   transition<Name<15>> (eq (15), std::make_tuple (res (65), res (66)))),
-                                                  std::make_tuple (res (55), res (56))),
+                                 state<Name<14>> (res (53), res (54),
+                                                  transition<Name<13>> (eq (-15), res (65), res (66)),
+                                                                   transition<Name<15>> (eq (15), res (65), res (66))),
+                                                  res (55), res (56)),
 
-                                 state<Name<15>> (std::make_tuple (res (57), res (58)),
-                                                  std::make_tuple (transition<Name<14>> (eq (-16), std::make_tuple (res (65), res (66))),
-                                                                   transition<Name<16>> (eq (16), std::make_tuple (res (65), res (66)))),
-                                                  std::make_tuple (res (59), res (60))),
+                                 state<Name<15>> (res (57), res (58),
+                                                  transition<Name<14>> (eq (-16), res (65), res (66)),
+                                                                   transition<Name<16>> (eq (16), res (65), res (66))),
+                                                  res (59), res (60)),
 
-                                 state<Name<16>> (std::make_tuple (res (61), res (62)),
-                                                  std::make_tuple (transition<Name<15>> (eq (-17), std::make_tuple (res (65), res (66))),
-                                                                   transition<Name<16>> (eq (17), std::make_tuple (res (65), res (66)))),
-                                                  std::make_tuple (res (63), res (64)))
+                                 state<Name<16>> (res (61), res (62),
+                                                  transition<Name<15>> (eq (-17), res (65), res (66)),
+                                                                   transition<Name<16>> (eq (17), res (65), res (66))),
+                                                  res (63), res (64))
 #endif
                                          ));
 
