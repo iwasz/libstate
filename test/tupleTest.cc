@@ -276,32 +276,7 @@ end:;
 #endif
 }
 
-// template <typename Ev, typename StaT> auto machine (StaT &&s) -> Machine<Ev, StaT> { return Machine<Ev, StaT> (std::forward<StaT> (s)); }
-
 /****************************************************************************/
-
-// struct res {
-//         res (std::string s) : message{std::move (s)} {}
-//         void operator() (std::string const &) { results.push_back (message); }
-
-// private:
-//         std::string message;
-// };
-
-// std::vector<std::string> results2;
-// auto res (std::string const &message)
-// {
-//         return [message] (auto const &ev) { results2.push_back (message); };
-// }
-
-// class res {
-// public:
-//         res (std::string m) : message (std::move (m)) {}
-//         void operator() (std::string const &) { results2.push_back (message); }
-
-// private:
-//         std::string message;
-// };
 
 int main ()
 {
@@ -310,7 +285,6 @@ int main ()
         using namespace std::string_literals;
 
         auto res = [&results] (const char *const message) { return [&results, message] (auto const &ev) { results.emplace_back (message); }; };
-        // auto res = [&results] (std::string message) { return [&results, message] (auto const &ev) { results.push_back (message); }; };
         auto cmd = [&results] (const char *const message) { return [&results, message] { results.emplace_back (message); }; };
         auto eq = [] (const char *what) { return [what] (auto const &i) -> bool { return i == what; }; };
 

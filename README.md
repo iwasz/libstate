@@ -246,6 +246,7 @@ public:
 
 private:
         std::string message;
+        // std::array<char, 1024> ppp; // This does not change much
 };
 ```
 
