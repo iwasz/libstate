@@ -23,7 +23,7 @@
 using namespace ls;
 
 /**
- * Timeouts
+ * Timeouts (non blocking actions)
  * Queue (?)
  */
 
@@ -74,14 +74,6 @@ template <unsigned int CRC> struct Crc32Impl<CRC> {
 };
 
 template <char... Chars> using Crc32 = Crc32Impl<0xFFFFFFFF, Chars...>;
-
-// constexpr unsigned int crc32_rec (unsigned int crc, const char *s)
-// {
-//         return *s == 0 ? crc ^ 0xFFFFFFFF
-//                        : crc32_rec (crc32_table[static_cast<unsigned char> (crc) ^ static_cast<unsigned char> (*s)] ^ (crc >> 8), s + 1);
-// }
-
-// constexpr unsigned int operator"" _crc32 (const char *s, size_t len) { return crc32_rec (0xFFFFFFFF, s); }
 
 template <char... s> struct Name2 {
         static constexpr char const *c_str () { return "TODO"; }
@@ -203,7 +195,7 @@ template <typename StaT> struct Machine {
         template <typename Fun> void forCurrentState (Fun &&function);
 
         StaT states;
-        unsigned int currentStateIndex{Crc32<'I', 'N', 'I', 'T'>::value};
+        unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
         Timer timer;
 };
 
@@ -250,11 +242,6 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
         std::apply ([&ev, &function] (auto &... transition) { impl::runIfMatchingTransition (std::forward<Fun> (function), ev, transition...); },
                     transitions);
 }
-
-// template <typename T, typename = std::void_t<>> struct is_state_entry_no_arg : public std::false_type {
-// };
-// template <typename T> struct is_state_entry_no_arg<T, std::void_t<decltype (std::declval<T &> ().runEntry ())>> : public std::true_type {
-// };
 
 template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev const &ev)
 {
