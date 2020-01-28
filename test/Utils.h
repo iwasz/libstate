@@ -13,7 +13,7 @@
 class At {
 public:
         At (gsl::czstring<> c) : cmd (c) {}
-        void operator() () { std::cout << "usart <- " << cmd << std::endl; }
+        void operator() (int) { std::cout << "usart <- " << cmd << std::endl; }
 
 private:
         gsl::czstring<> cmd;

@@ -185,6 +185,9 @@ template <typename StaT> struct Machine {
         /// Run functionFunction on currentState.
         template <typename Fun> void forCurrentState (Fun &&function);
 
+        /// For testing
+        auto getCurrentStateIndex () const { return currentStateIndex; }
+
         StaT states;
         unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
         Timer timer;
