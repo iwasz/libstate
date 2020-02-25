@@ -86,13 +86,13 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                  transition (
                                          "C"_STATE, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
 
-                          state ("C"_STATE, entry (At ("Z")), exit (At ("DT")),
+                          state ("C"_STATE, entry ([] {}), exit ([] (auto) {}),
                                  transition (
                                          "B"_STATE, [] (int ev) { return ev == 5; }, At ("")),
                                  transition (
                                          "FINAL"_STATE, [] (int ev) { return ev == 4; }, At ("Ble"))),
 
-                          state ("FINAL"_STATE, entry ([] {}), exit (At ("DT")),
+                          state ("FINAL"_STATE, entry ([] () {}, [] () {}), exit ([] (auto) {}, [] (auto) {}),
                                  transition (
                                          ""_STATE, [] (int ev) { return false; }, At ("")))
 

@@ -115,12 +115,19 @@ template <typename Sn, typename EntT, typename TraT, typename ExiT> struct State
         ExiT exitActions;
 };
 
+template <typename Ev, typename Act> inline void runActions (Ev const &ev, Act &action)
+{
+        if constexpr (std::is_invocable_v<decltype (action), Ev const &>) {
+                action (ev);
+        }
+        else {
+                action ();
+        }
+}
 template <typename Ev, typename... Acts> inline void runActions (Ev const &ev, std::tuple<Acts...> &actions)
 {
-        std::apply ([&ev] (auto &... action) { (action (ev), ...); }, actions);
+        std::apply ([&ev] (auto &... action) { (runActions (ev, action), ...); }, actions);
 }
-
-template <typename Ev, typename Act> inline void runActions (Ev const &ev, Act &action) { action (ev); }
 
 template <typename Ev, typename Act> void runSomeActions (Ev const &ev, Act &actions) { runActions (ev, actions); }
 
@@ -241,24 +248,24 @@ template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev cons
                 // TODO For all events {}
 
                 // If not run
-                if constexpr (std::is_invocable_v<decltype (state.entryActions), Ev const &>) {
-                        runSomeActions (ev, state.entryActions);
-                }
-                else {
-                        runSomeActions (state.entryActions);
-                }
+                // if constexpr (std::is_invocable_v<decltype (state.entryActions), Ev const &>) {
+                runActions (ev, state.entryActions);
+                // }
+                // else {
+                //         runSomeActions (state.entryActions);
+                // }
 
                 forMatchingTransition (ev, state.transitions, [&ev, machine, &state] (auto &transition) {
 #ifndef NDEBUG
                 // std::cout << "Transition to : " << trans->getStateName () << std::endl;
 #endif
                         // machine->forCurrentState ([&ev] (auto &state) { state.runExit (ev); });
-                        if constexpr (std::is_invocable_v<decltype (state.exitActions), Ev const &>) {
-                                runSomeActions (ev, state.exitActions);
-                        }
-                        else {
-                                runSomeActions (state.exitActions);
-                        }
+                        // if constexpr (std::is_invocable_v<decltype (state.exitActions), Ev const &>) {
+                        runActions (ev, state.exitActions);
+                        // }
+                        // else {
+                        //         runSomeActions (state.exitActions);
+                        // }
 
                         transition.runTransitionActions (ev);
 
