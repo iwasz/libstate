@@ -144,9 +144,7 @@ Copy (in Polish) of TODOs from the previous version of the lib.
 
 
 # Dependencies
-* Boost hana
-* GSL
-* ~~etl~~
+* Boost Callable Traits
 * Catch2
 
 # Benchmarks

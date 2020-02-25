@@ -41,31 +41,36 @@ private:
  * This test only instantiates some bits of state machine and checks if it is even possible.
  * Does not do any REQUIRE checks.
  */
-// TEST_CASE ("First test", "[Instantiation]")
-// {
-//         State noAction ("A"_STATE);
+TEST_CASE ("First test", "[Instantiation]")
+{
+        auto m = machine (
+                // TODO Full, many actions!
+                // state ("INIT"_STATE, entry (At ("A"), At ("bla")), exit (At ("A"), At ("bla")),
+                //        transition (
+                //                "B"_STATE, [] (int i) { return i == 2; }, At ("bla"), At ("bla"))),
 
-//         State state1 (
-//                 "A"_STATE,
-//                 entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, // First entry action is a lambda
-//                        Class ("Class instance action"),                                                     // Second is a function object.
-//                        actionFunction,                                                                      // Third is a regular function.
-//                        actionFunctionTemplate<std::string const &>));                                       // Fourth is a function template.
+                // Full single actions
+                state ("INIT"_STATE, entry (At ("bla")), exit (At ("bla")),
+                       transition (
+                               "B"_STATE, [] (int i) { return i == 2; }, At ("bla"))),
 
-//         State state2 ("A"_STATE,
-//                       entry ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; },
-//                              Class ("Class instance action"), actionFunction, actionFunctionTemplate<std::string const &>),
-//                       exit ([] (auto &&ev) { std::cout << "Inline lambda action (" << ev << ")" << std::endl; }, Class ("Class instance
-//                       action"),
-//                             actionFunction, actionFunctionTemplate<std::string const &>));
+                // Transition without actions
+                state ("B"_STATE, entry (At ("Z")), exit (At ("A")), transition ("C"_STATE, [] (int i) { return i == 3; })),
 
-//         auto state3 = State ("A"_STATE, entry (At{"ATZ"}, At{"ATDT"}));
+                // TODO Transition without actions and without condition (always true)
+                // state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("D"_STATE)),
 
-//         state2.entry ("hello"s);
-//         state2.exit ("hello"s);
+                // TODO Transition WITH actions but without condition (always true)
+                // state ("D"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_STATE), At ("Z")),
 
-//         state3.entry ("hello"s);
-// }
+                state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")),
+                       transition (
+                               ""_STATE, [] (int ev) { return false; }, At ("")))
+
+        );
+
+        m.run (0);
+}
 
 /**
  * Machine instance and a few features tested.
@@ -87,7 +92,7 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                  transition (
                                          "FINAL"_STATE, [] (int ev) { return ev == 4; }, At ("Ble"))),
 
-                          state ("FINAL"_STATE, entry (At ("Z")), exit (At ("DT")),
+                          state ("FINAL"_STATE, entry ([] {}), exit (At ("DT")),
                                  transition (
                                          ""_STATE, [] (int ev) { return false; }, At ("")))
 

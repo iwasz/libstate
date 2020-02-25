@@ -28,6 +28,7 @@ ADD_EXECUTABLE (unittest
     "test/00CatchInit.cc"
     "test/01InstantiationTest.cc"
     "test/02ActionTest.cc"
+    "test/03TraitsTest.cc"
 )
 
 ADD_EXECUTABLE (benchmarktest

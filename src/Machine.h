@@ -57,7 +57,8 @@ template <unsigned int CRC_VALUE, char... Chars> struct Crc32Impl {
 
 template <unsigned int CRC_VALUE, char Head, char... Tail> struct Crc32Impl<CRC_VALUE, Head, Tail...> {
         static constexpr unsigned int value
-                = Crc32Impl<crc32_table[static_cast<unsigned char> (CRC_VALUE) ^ static_cast<unsigned char> (Head)] ^ (CRC_VALUE >> 8), Tail...>::value;
+                = Crc32Impl<crc32_table[static_cast<unsigned char> (CRC_VALUE) ^ static_cast<unsigned char> (Head)] ^ (CRC_VALUE >> 8),
+                            Tail...>::value;
 };
 
 template <unsigned int CRC_VALUE> struct Crc32Impl<CRC_VALUE> {
@@ -95,16 +96,6 @@ template <typename Sn, typename Con, typename TacT> struct Transition {
 template <typename Sn, typename Con, typename TacT> template <typename Ev> void Transition<Sn, Con, TacT>::runTransitionActions (Ev const &ev)
 {
         std::apply ([&ev] (auto &... transitionAction) { (transitionAction (ev), ...); }, transitionActions);
-}
-
-// template <typename Sn, typename Con, typename TacT> auto transition (Con &&condition, TacT &&actions)
-// {
-//         return Transition<Sn, Con, TacT> (std::forward<Con> (condition), std::forward<TacT> (actions));
-// }
-
-template <typename Sn, typename Con, typename... Tac> auto transition (Con &&condition, Tac &&... actions)
-{
-        return Transition<Sn, Con, decltype (std::make_tuple (actions...))> (std::forward<Con> (condition), std::make_tuple (actions...));
 }
 
 template <typename Sn, typename Con, typename... Tac> auto transition (Sn, Con &&condition, Tac &&... actions)
@@ -190,7 +181,7 @@ template <typename StaT> struct Machine {
 
         StaT states;
         unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
-//        Timer timer;
+        //        Timer timer;
 };
 
 template <typename... Sta> constexpr auto machine (Sta &&... states) { return Machine (std::make_tuple (states...)); }
@@ -240,9 +231,9 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
 
 template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev const &ev)
 {
-//        if (!timer.isExpired ()) {
-//                return;
-//        }
+        //        if (!timer.isExpired ()) {
+        //                return;
+        //        }
 
         // TODO Currently hardcoded currentState to 1
 
