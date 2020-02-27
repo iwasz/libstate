@@ -241,32 +241,36 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
 
 template <typename StaT> template <typename Ev> bool Machine<StaT>::run (Ev const &ev)
 {
-        bool stateChanged{};
+        bool stateChangedAtLeastOnce{};
 
-        forCurrentState ([&ev, &stateChanged, machine = this] (auto &state) {
-                if (!machine->entryRun) {
-                        runActions (ev, state.entryActions);
-                        machine->entryRun = true;
-                }
+        while (true) {
+                bool stateChanged{};
 
-                forMatchingTransition (ev, state.transitions, [&ev, &stateChanged, machine, &state] (auto &transition) {
+                forCurrentState ([&ev, &stateChanged, &stateChangedAtLeastOnce, machine = this] (auto &state) {
+                        if (!machine->entryRun) {
+                                runActions (ev, state.entryActions);
+                                machine->entryRun = true;
+                        }
+
+                        forMatchingTransition (
+                                ev, state.transitions, [&ev, &stateChanged, &stateChangedAtLeastOnce, machine, &state] (auto &transition) {
 #ifndef NDEBUG
-                // std::cout << "Transition to : " << trans->getStateName () << std::endl;
+                        // std::cout << "Transition to : " << trans->getStateName () << std::endl;
 #endif
-                        runActions (ev, state.exitActions);
-                        transition.runTransitionActions (ev);
-                        machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
-
-                        // ???? Can I replace this with state.runEntry at the beginnig?>?
-                        // machine->forCurrentState ([&ev] (auto &state) { state.runEntry (ev); });
-                        // eventQueue.clear
-
-                        stateChanged = true;
-                        machine->entryRun = false;
+                                        runActions (ev, state.exitActions);
+                                        transition.runTransitionActions (ev);
+                                        machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
+                                        stateChangedAtLeastOnce = stateChanged = true;
+                                        machine->entryRun = false;
+                                });
                 });
-        });
 
-        return stateChanged;
+                if (!stateChanged) {
+                        break;
+                }
+        }
+
+        return stateChangedAtLeastOnce;
 
         // #if 0
         //         if (!timer.isExpired ()) {

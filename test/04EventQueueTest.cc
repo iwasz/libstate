@@ -115,15 +115,13 @@ TEST_CASE ("Condition", "[Event queue]")
                        transition ("F"_STATE, strict ("kot", "ma", "psa"), At ("transition to F"))),
 
                 state ("F"_STATE, entry (At ("F entry")), exit (At ("F exit")),
-                       transition ("G"_STATE, seq ("kot", "ma", "psa"), At ("transition to G"))),
+                       transition ("G"_STATE, seq ("idzie", "Grześ", "wieś"), At ("transition to G"))),
 
                 state ("G"_STATE, entry (At ("G entry")), exit (At ("G exit")),
                        transition (
-                               "Z"_STATE, [] (auto /* a */) { return true; }, At ("transition to Z"))),
+                               "Z"_STATE, [] (auto /* a */) { return false; }, At ("transition to Z")))
 
-                state ("Z"_STATE, entry (At ("Z entry")), exit (At ("Z exit")),
-                       transition (
-                               "INIT"_STATE, [] (auto const & /* e */) { return false; }, At ("transition to INIT"))));
+        );
 
         /*
          * We run the machine for the first time with two events in the queue. Both
@@ -162,11 +160,11 @@ TEST_CASE ("Condition", "[Event queue]")
         /*--------------------------------------------------------------------------*/
         // F -> G
         // Negative
-        REQUIRE (!m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"}));
+        m.run (Event{"Grześ", "Idzie", "aaa", "przez", "wieś", "worek"});
         REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
 
         // Positive
-        m.run (Event{"Stary", "kot", "ma", "parasol", "i", "psa"});
+        m.run (Event{"idzie", "aaa", "Grześ", "przez", "wieś", "worek"});
         REQUIRE (m.getCurrentStateIndex () == "G"_STATE.getIndex ());
 }
 
@@ -210,7 +208,7 @@ TEST_CASE ("AndOr", "[Event queue]")
                                  transition ("C"_STATE, size (3) && has ("Ala") && has ("kota"), At ("transition to C"))),
 
                           state ("C"_STATE, entry (At ("C entry")), exit (At ("C exit")),
-                                 transition ("D"_STATE, size (3) || has ("Ala"), At ("transition to C")))
+                                 transition ("D"_STATE, size (4) || has ("Janek"), At ("transition to C")))
 
         );
 
@@ -246,7 +244,7 @@ TEST_CASE ("AndOr", "[Event queue]")
         /*--------------------------------------------------------------------------*/
 
         // Positive test
-        m.run (Event{"Aaa", "Bbb", "Ccc"});
+        m.run (Event{"Aaa", "Bbb", "Ccc", "ddd"});
         REQUIRE (m.getCurrentStateIndex () == "D"_STATE.getIndex ());
 }
 
@@ -401,7 +399,7 @@ TEST_CASE ("LikeCondition", "[Event queue]")
 
                 state ("G"_STATE, entry (At ("G entry")), exit (At ("G exit")),
                        transition (
-                               "Z"_STATE, [] (auto /* a */) { return true; }, At ("transition to Z"))),
+                               "Z"_STATE, [] (auto /* a */) { return false; }, At ("transition to Z"))),
 
                 state ("Z"_STATE, entry (At ("Z entry")), exit (At ("Z exit")),
                        transition (
@@ -428,25 +426,25 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         REQUIRE (m.getCurrentStateIndex () == "E"_STATE.getIndex ());
 
         /*--------------------------------------------------------------------------*/
-        // E -> F
+        // E -> F -> G
         // Negative check
         m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"});
         // We stay in E
         REQUIRE (m.getCurrentStateIndex () == "E"_STATE.getIndex ());
 
         m.run (Event{"Stary", "kot", "ma", "psa", "i", "parasol"});
-        REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "G"_STATE.getIndex ());
 
         /*--------------------------------------------------------------------------*/
         // F -> G
         // Negative
-        REQUIRE (!m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"}));
-        REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
+        // REQUIRE (!m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"}));
+        // REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
 
-        REQUIRE (!m.run (Event{"kot"}));
-        REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
+        // REQUIRE (!m.run (Event{"kot"}));
+        // REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
 
-        // Positive
-        m.run (Event{"Stary", "kot", "ma", "parasol", "i", "psa"});
-        REQUIRE (m.getCurrentStateIndex () == "G"_STATE.getIndex ());
+        // // Positive
+        // m.run (Event{"Stary", "kot", "ma", "parasol", "i", "psa"});
+        // REQUIRE (m.getCurrentStateIndex () == "G"_STATE.getIndex ());
 }
