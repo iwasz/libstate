@@ -178,7 +178,8 @@ template <typename StaT> struct Machine {
 
         Machine (StaT states) : states{std::move (states)} {}
 
-        template <typename Ev> void run (Ev const &ev);
+        /// returns whether the state was changed
+        template <typename Ev> bool run (Ev const &ev);
 
         /// Run functionFunction on currentState.
         template <typename Fun> void forCurrentState (Fun &&function);
@@ -236,15 +237,11 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
                     transitions);
 }
 
-template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev const &ev)
+template <typename StaT> template <typename Ev> bool Machine<StaT>::run (Ev const &ev)
 {
-        //        if (!timer.isExpired ()) {
-        //                return;
-        //        }
+        bool stateChanged{};
 
-        // TODO Currently hardcoded currentState to 1
-
-        forCurrentState ([&ev, machine = this] (auto &state) {
+        forCurrentState ([&ev, &stateChanged, machine = this] (auto &state) {
                 // TODO For all events {}
 
                 // If not run
@@ -255,7 +252,7 @@ template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev cons
                 //         runSomeActions (state.entryActions);
                 // }
 
-                forMatchingTransition (ev, state.transitions, [&ev, machine, &state] (auto &transition) {
+                forMatchingTransition (ev, state.transitions, [&ev, &stateChanged, machine, &state] (auto &transition) {
 #ifndef NDEBUG
                 // std::cout << "Transition to : " << trans->getStateName () << std::endl;
 #endif
@@ -281,64 +278,70 @@ template <typename StaT> template <typename Ev> void Machine<StaT>::run (Ev cons
                         // ???? Can I replace this with state.runEntry at the beginnig?>?
                         // machine->forCurrentState ([&ev] (auto &state) { state.runEntry (ev); });
                         // eventQueue.clear
+
+                        stateChanged = true;
                 });
         });
 
-#if 0
-        if (!timer.isExpired ()) {
-                return;
-        }
+        return stateChanged;
 
-#ifndef NDEBUG
-        std::cout << "== Run ==" << std::endl;
-#endif
+        // #if 0
+        //         if (!timer.isExpired ()) {
+        //                 return;
+        //         }
 
-        if (!currentState) {
-                currentState = findInitialState ();
-        }
+        // #ifndef NDEBUG
+        //         std::cout << "== Run ==" << std::endl;
+        // #endif
 
-        for (ErasedTransitionBase<Ev> *trans = currentState->getTransition (); trans != nullptr; trans = trans->next) {
-                for (auto const &event : eventQueue) {
-                        if (!trans->checkCondition (event)) {
-                                continue;
-                        }
-#ifndef NDEBUG
-                        std::cout << "Transition to : " << trans->getStateName () << std::endl;
-#endif
-                        if (Delay d = currentState->runExitActions (event); d != DELAY_ZERO) {
-                                std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
-                                          << std::endl;
+        //         if (!currentState) {
+        //                 currentState = findInitialState ();
+        //         }
 
-                                timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
-                                goto end;
-                        }
+        //         for (ErasedTransitionBase<Ev> *trans = currentState->getTransition (); trans != nullptr; trans = trans->next) {
+        //                 for (auto const &event : eventQueue) {
+        //                         if (!trans->checkCondition (event)) {
+        //                                 continue;
+        //                         }
+        // #ifndef NDEBUG
+        //                         std::cout << "Transition to : " << trans->getStateName () << std::endl;
+        // #endif
+        //                         if (Delay d = currentState->runExitActions (event); d != DELAY_ZERO) {
+        //                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count
+        //                                 () << "ms"
+        //                                           << std::endl;
 
-                        if (Delay d = trans->runActions (event); d != DELAY_ZERO) {
-                                std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count () << "ms"
-                                          << std::endl;
+        //                                 timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
+        //                                 goto end;
+        //                         }
 
-                                timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
-                                goto end;
-                        }
+        //                         if (Delay d = trans->runActions (event); d != DELAY_ZERO) {
+        //                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count
+        //                                 () << "ms"
+        //                                           << std::endl;
 
-                        prevState = currentState;
-                        currentState = states.at (trans->getStateIndex ());
-                        Ensures (currentState);
+        //                                 timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
+        //                                 goto end;
+        //                         }
 
-                        currentState->runEntryActions (event);
-                        eventQueue.clear (); // TODO not quite like that
+        //                         prevState = currentState;
+        //                         currentState = states.at (trans->getStateIndex ());
+        //                         Ensures (currentState);
 
-                        if (prevState) {
-                                prevState->resetExitActions ();
-                        }
+        //                         currentState->runEntryActions (event);
+        //                         eventQueue.clear (); // TODO not quite like that
 
-                        trans->resetActions ();
-                        currentState->resetEntryActions ();
-                }
-        }
+        //                         if (prevState) {
+        //                                 prevState->resetExitActions ();
+        //                         }
 
-end:;
-#endif
+        //                         trans->resetActions ();
+        //                         currentState->resetEntryActions ();
+        //                 }
+        //         }
+
+        // end:;
+        // #endif
 }
 
 } // namespace ls

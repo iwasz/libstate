@@ -43,6 +43,9 @@ private:
  */
 TEST_CASE ("First test", "[Instantiation]")
 {
+        // std::string s = "ala ma kota";
+        // std::cout << s << std::endl;
+
         auto m = machine (
                 // TODO Full, many actions!
                 // state ("INIT"_STATE, entry (At ("A"), At ("bla")), exit (At ("A"), At ("bla")),

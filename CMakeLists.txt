@@ -27,8 +27,9 @@ ADD_EXECUTABLE (unittest
     "test/Utils.h"
     "test/00CatchInit.cc"
     "test/01InstantiationTest.cc"
-    "test/02ActionTest.cc"
+    "test/02ActionTest.cc"    
     "test/03TraitsTest.cc"
+    "test/04EventQueueTest.cc"
 )
 
 ADD_EXECUTABLE (benchmarktest
