@@ -174,8 +174,8 @@ template <typename Act> constexpr auto exit (Act &&act) { return std::forward<Ac
 
 /****************************************************************************/
 
-template <typename StaT> struct Machine {
-
+template <typename StaT> class Machine {
+public:
         Machine (StaT states) : states{std::move (states)} {}
 
         /// returns whether the state was changed
@@ -189,7 +189,9 @@ template <typename StaT> struct Machine {
 
         StaT states;
         unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
-        //        Timer timer;
+
+private:
+        bool entryRun{};
 };
 
 template <typename... Sta> constexpr auto machine (Sta &&... states) { return Machine (std::make_tuple (states...)); }
@@ -242,37 +244,17 @@ template <typename StaT> template <typename Ev> bool Machine<StaT>::run (Ev cons
         bool stateChanged{};
 
         forCurrentState ([&ev, &stateChanged, machine = this] (auto &state) {
-                // TODO For all events {}
-
-                // If not run
-                // if constexpr (std::is_invocable_v<decltype (state.entryActions), Ev const &>) {
-                runActions (ev, state.entryActions);
-                // }
-                // else {
-                //         runSomeActions (state.entryActions);
-                // }
+                if (!machine->entryRun) {
+                        runActions (ev, state.entryActions);
+                        machine->entryRun = true;
+                }
 
                 forMatchingTransition (ev, state.transitions, [&ev, &stateChanged, machine, &state] (auto &transition) {
 #ifndef NDEBUG
                 // std::cout << "Transition to : " << trans->getStateName () << std::endl;
 #endif
-                        // machine->forCurrentState ([&ev] (auto &state) { state.runExit (ev); });
-                        // if constexpr (std::is_invocable_v<decltype (state.exitActions), Ev const &>) {
                         runActions (ev, state.exitActions);
-                        // }
-                        // else {
-                        //         runSomeActions (state.exitActions);
-                        // }
-
                         transition.runTransitionActions (ev);
-
-                        // if constexpr (std::is_invocable_v<decltype (transition.transitionActions), Ev const &>) {
-                        //         runSomeActions (ev, transition.transitionActions);
-                        // }
-                        // else {
-                        //         runSomeActions (transition.transitionActions);
-                        // }
-
                         machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
 
                         // ???? Can I replace this with state.runEntry at the beginnig?>?
@@ -280,6 +262,7 @@ template <typename StaT> template <typename Ev> bool Machine<StaT>::run (Ev cons
                         // eventQueue.clear
 
                         stateChanged = true;
+                        machine->entryRun = false;
                 });
         });
 
