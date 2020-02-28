@@ -405,16 +405,24 @@ TEST_CASE ("LikeCondition", "[Event queue]")
                        transition (
                                "INIT"_STATE, [] (auto const & /* e */) { return false; }, At ("transition to INIT"))));
 
+        using namespace std::string_literals;
+
         /*
          * We run the machine for the first time with two events in the queue. Both
          * events will be checked by the conditions. Because the transition of "INIT"_STATE
          * fires upon event '2', the state is changed.
          */
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_STATE.getIndex ());
+        REQUIRE (std::string{m.getCurrentStateName ()} == "INIT"s);
+
+        // Fires entry actions, does not transition anywhere, because conditions are not satified
         m.run (Event{});
         REQUIRE (m.getCurrentStateIndex () == "INIT"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateName () == "INIT"s);
 
         m.run (Event{"Ala"});
         REQUIRE (m.getCurrentStateIndex () == "B"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateName () == "B"s);
 
         m.run (Event{"Ala", "kocha", "Janka"});
         REQUIRE (m.getCurrentStateIndex () == "C"_STATE.getIndex ());

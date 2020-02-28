@@ -7,21 +7,12 @@
  ****************************************************************************/
 
 #pragma once
-//#include "Misc.h"
+#include <array>
+#include <gsl/gsl>
 #include <tuple>
 #include <utility>
 
 namespace ls {
-
-/**
- * Timeouts (non blocking actions)
- * Queue (?)
- */
-
-template <unsigned int index> struct Name {
-        const char *getName () const { return "TODO"; }
-        static constexpr auto getIndex () { return index; }
-};
 
 /****************************************************************************/
 
@@ -68,13 +59,16 @@ template <unsigned int CRC_VALUE> struct Crc32Impl<CRC_VALUE> {
 template <char... Chars> using Crc32 = Crc32Impl<0xFFFFFFFF, Chars...>;
 
 template <char... s> struct Name2 {
-        static constexpr char const *c_str () { return "TODO"; }
+
+        constexpr static gsl::czstring<> c_str () { return name.data (); }
+        constexpr static std::array<char, sizeof...(s) + 1> name{s..., '\0'};
+
         static constexpr unsigned int getIndex () { return Crc32<s...>::value; }
 };
 
 template <char... s> constexpr Name2<s...> Name2_c{};
 
-// TODO This is a GNU extension. Provide macro as an option. Or better still, use hana::string explicitly
+// TODO This is a GNU extension. Provide macro as an option.
 template <typename C, C... c> constexpr auto operator""_STATE () { return Name2_c<c...>; }
 
 /****************************************************************************/
@@ -184,19 +178,22 @@ public:
         /// Run functionFunction on currentState.
         template <typename Fun> void forCurrentState (Fun &&function);
 
-        /// For testing
+        /// States are distinguished at runtime by unique IDS.
         auto getCurrentStateIndex () const { return currentStateIndex; }
+        /// For debugging purposes
+        gsl::czstring<> getCurrentStateName () const { return currentStateName; }
 
         StaT states;
-        unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
 
 private:
         bool entryRun{};
+        unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
+        gsl::czstring<> currentStateName{std::tuple_element<0, StaT>::type::Name::c_str ()};
 };
 
 template <typename... Sta> constexpr auto machine (Sta &&... states) { return Machine (std::make_tuple (states...)); }
 
-namespace impl {
+namespace detail {
         template <typename Fun, typename Sta, typename... Rst>
         void runIfCurrentState (unsigned int current, Fun &&fun, Sta &state, Rst &... rest)
         {
@@ -210,15 +207,16 @@ namespace impl {
                 }
         }
 
-} // namespace impl
+} // namespace detail
 
 template <typename StaT> template <typename Fun> void Machine<StaT>::forCurrentState (Fun &&function)
 {
-        std::apply ([&function, this] (auto &... state) { impl::runIfCurrentState (currentStateIndex, std::forward<Fun> (function), state...); },
-                    states);
+        std::apply (
+                [&function, this] (auto &... state) { detail::runIfCurrentState (currentStateIndex, std::forward<Fun> (function), state...); },
+                states);
 }
 
-namespace impl {
+namespace detail {
         template <typename Fun, typename Ev, typename Tra, typename... Rst>
         void runIfMatchingTransition (Fun &&fun, Ev const &ev, Tra &transition, Rst &... rest)
         {
@@ -231,12 +229,13 @@ namespace impl {
                         runIfMatchingTransition (std::forward<Fun> (fun), ev, rest...);
                 }
         }
-} // namespace impl
+} // namespace detail
 
 template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (Ev const &ev, TraT &transitions, Fun &&function)
 {
-        std::apply ([&ev, &function] (auto &... transition) { impl::runIfMatchingTransition (std::forward<Fun> (function), ev, transition...); },
-                    transitions);
+        std::apply (
+                [&ev, &function] (auto &... transition) { detail::runIfMatchingTransition (std::forward<Fun> (function), ev, transition...); },
+                transitions);
 }
 
 template <typename StaT> template <typename Ev> bool Machine<StaT>::run (Ev const &ev)
@@ -254,12 +253,10 @@ template <typename StaT> template <typename Ev> bool Machine<StaT>::run (Ev cons
 
                         forMatchingTransition (
                                 ev, state.transitions, [&ev, &stateChanged, &stateChangedAtLeastOnce, machine, &state] (auto &transition) {
-#ifndef NDEBUG
-                        // std::cout << "Transition to : " << trans->getStateName () << std::endl;
-#endif
                                         runActions (ev, state.exitActions);
                                         transition.runTransitionActions (ev);
                                         machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
+                                        machine->currentStateName = std::remove_reference_t<decltype (transition)>::Name::c_str ();
                                         stateChangedAtLeastOnce = stateChanged = true;
                                         machine->entryRun = false;
                                 });
