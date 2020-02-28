@@ -40,30 +40,29 @@ TEST_CASE ("Check if all called", "[Action]")
         auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
 
         auto m = machine (
-                state ("INIT"_STATE, entry (res ("INIT entry")), exit (res ("INIT exit")),
-                       transition ("B"_STATE, eq (2), res ("INIT->B action"))),
+                state ("INIT"_S, entry (res ("INIT entry")), exit (res ("INIT exit")), transition ("B"_S, eq (2), res ("INIT->B action"))),
 
-                state ("B"_STATE, entry (res ("B entry")), exit (res ("B exit")),
-                       transition ("C"_STATE, eq (3), res ("B->C action1"), res ("B->C action2"))),
+                state ("B"_S, entry (res ("B entry")), exit (res ("B exit")),
+                       transition ("C"_S, eq (3), res ("B->C action1"), res ("B->C action2"))),
 
-                state ("C"_STATE, entry (res ("C entry")), exit (res ("C exit")), transition ("B"_STATE, eq (5), res ("C->B action")),
-                       transition ("FINAL"_STATE, eq (4), res ("C->FINAL action"))),
+                state ("C"_S, entry (res ("C entry")), exit (res ("C exit")), transition ("B"_S, eq (5), res ("C->B action")),
+                       transition ("FINAL"_S, eq (4), res ("C->FINAL action"))),
 
-                state ("FINAL"_STATE, entry (res ("FINAL entry")), exit (res ("")), transition ("FINAL"_STATE, eq (77), res ("C->FINAL action")))
+                state ("FINAL"_S, entry (res ("FINAL entry")), exit (res ("")), transition ("FINAL"_S, eq (77), res ("C->FINAL action")))
 
         );
 
         m.run (0);
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_S.getIndex ());
         REQUIRE (results.at (0) == "INIT entry");
         REQUIRE (results.size () == 1);
 
         m.run (-1); // Nothing should happen
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_S.getIndex ());
         REQUIRE (results.size () == 1);
 
-        m.run (2); // State is successfully changed to "B"_STATE.
-        REQUIRE (m.getCurrentStateIndex () == "B"_STATE.getIndex ());
+        m.run (2); // State is successfully changed to "B"_S.
+        REQUIRE (m.getCurrentStateIndex () == "B"_S.getIndex ());
 
         // TODO
         REQUIRE (results.size () == 4);
@@ -72,7 +71,7 @@ TEST_CASE ("Check if all called", "[Action]")
         REQUIRE (results.at (3) == "B entry");
 
         m.run (3);
-        REQUIRE (m.getCurrentStateIndex () == "C"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "C"_S.getIndex ());
         REQUIRE (results.at (4) == "B exit");
         REQUIRE (results.at (5) == "B->C action1");
         REQUIRE (results.at (6) == "B->C action2");
@@ -80,14 +79,14 @@ TEST_CASE ("Check if all called", "[Action]")
         REQUIRE (results.size () == 8);
 
         m.run (5);
-        REQUIRE (m.getCurrentStateIndex () == "B"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "B"_S.getIndex ());
         REQUIRE (results.at (8) == "C exit");
         REQUIRE (results.at (9) == "C->B action");
         REQUIRE (results.at (10) == "B entry");
         REQUIRE (results.size () == 11);
 
         m.run (3);
-        REQUIRE (m.getCurrentStateIndex () == "C"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "C"_S.getIndex ());
         REQUIRE (results.at (11) == "B exit");
         REQUIRE (results.at (12) == "B->C action1");
         REQUIRE (results.at (13) == "B->C action2");
@@ -95,7 +94,7 @@ TEST_CASE ("Check if all called", "[Action]")
         REQUIRE (results.size () == 15);
 
         m.run (4); // Transition condition is satisfied.
-        REQUIRE (m.getCurrentStateIndex () == "FINAL"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "FINAL"_S.getIndex ());
         REQUIRE (results.at (15) == "C exit");
         REQUIRE (results.at (16) == "C->FINAL action");
         REQUIRE (results.at (17) == "FINAL entry");

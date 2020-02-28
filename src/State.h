@@ -15,7 +15,7 @@
 // namespace ls {
 
 // // TODO This is a GNU extension. Provide macro as an option. Or better still, use hana::string explicitly
-// template <typename C, C... c> constexpr auto operator""_STATE () { return ls::string_c<c...>; }
+// template <typename C, C... c> constexpr auto operator""_S () { return ls::string_c<c...>; }
 
 // /**
 //  *

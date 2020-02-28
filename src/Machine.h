@@ -69,7 +69,7 @@ template <char... s> struct Name2 {
 template <char... s> constexpr Name2<s...> Name2_c{};
 
 // TODO This is a GNU extension. Provide macro as an option.
-template <typename C, C... c> constexpr auto operator""_STATE () { return Name2_c<c...>; }
+template <typename C, C... c> constexpr auto operator""_S () { return Name2_c<c...>; }
 
 /****************************************************************************/
 
@@ -320,64 +320,6 @@ template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT,
         }
 
         return stateChangedAtLeastOnce;
-
-        // #if 0
-        //         if (!timer.isExpired ()) {
-        //                 return;
-        //         }
-
-        // #ifndef NDEBUG
-        //         std::cout << "== Run ==" << std::endl;
-        // #endif
-
-        //         if (!currentState) {
-        //                 currentState = findInitialState ();
-        //         }
-
-        //         for (ErasedTransitionBase<Ev> *trans = currentState->getTransition (); trans != nullptr; trans = trans->next) {
-        //                 for (auto const &event : eventQueue) {
-        //                         if (!trans->checkCondition (event)) {
-        //                                 continue;
-        //                         }
-        // #ifndef NDEBUG
-        //                         std::cout << "Transition to : " << trans->getStateName () << std::endl;
-        // #endif
-        //                         if (Delay d = currentState->runExitActions (event); d != DELAY_ZERO) {
-        //                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count
-        //                                 () << "ms"
-        //                                           << std::endl;
-
-        //                                 timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
-        //                                 goto end;
-        //                         }
-
-        //                         if (Delay d = trans->runActions (event); d != DELAY_ZERO) {
-        //                                 std::cerr << "Delay requested : " << std::chrono::duration_cast<std::chrono::milliseconds> (d).count
-        //                                 () << "ms"
-        //                                           << std::endl;
-
-        //                                 timer.start (std::chrono::duration_cast<std::chrono::milliseconds> (d).count ());
-        //                                 goto end;
-        //                         }
-
-        //                         prevState = currentState;
-        //                         currentState = states.at (trans->getStateIndex ());
-        //                         Ensures (currentState);
-
-        //                         currentState->runEntryActions (event);
-        //                         eventQueue.clear (); // TODO not quite like that
-
-        //                         if (prevState) {
-        //                                 prevState->resetExitActions ();
-        //                         }
-
-        //                         trans->resetActions ();
-        //                         currentState->resetEntryActions ();
-        //                 }
-        //         }
-
-        // end:;
-        // #endif
 }
 
 } // namespace ls
