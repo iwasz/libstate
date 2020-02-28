@@ -109,15 +109,20 @@ template <typename Sn, typename EntT, typename TraT, typename ExiT> struct State
         ExiT exitActions;
 };
 
+/// For a callable (single action)
 template <typename Ev, typename Act> inline void runActions (Ev const &ev, Act &action)
 {
         if constexpr (std::is_invocable_v<decltype (action), Ev const &>) {
                 action (ev);
         }
-        else {
+        else if constexpr (std::is_invocable_v<decltype (action)>) {
                 action ();
         }
+
+        // Any other type will result with an empty operation
 }
+
+/// For a tuple of callables
 template <typename Ev, typename... Acts> inline void runActions (Ev const &ev, std::tuple<Acts...> &actions)
 {
         std::apply ([&ev] (auto &... action) { (runActions (ev, action), ...); }, actions);
@@ -160,23 +165,42 @@ template <typename Act> void runSomeActions (Act &actions) { runActions (actions
 //                                                                            std::forward<ExiT> (ex));
 // }
 
+template <typename Act> struct EntryActions {
+        EntryActions (Act a) : act{std::move (a)} {}
+        // std::tuple or a single callable
+        Act act;
+};
+
+template <typename... Acts> constexpr auto entry (Acts &&... act) { return EntryActions{std::make_tuple (act...)}; }
+template <typename Act> constexpr auto entry (Act &&act) { return EntryActions{std::forward<Act> (act)}; }
+
+template <typename Act> struct ExitActions {
+        ExitActions (Act a) : act{std::move (a)} {}
+        // std::tuple or a single callable
+        Act act;
+};
+
+template <typename... Act> constexpr auto exit (Act &&... act) { return ExitActions{std::make_tuple (act...)}; }
+template <typename Act> constexpr auto exit (Act &&act) { return ExitActions{std::forward<Act> (act)}; }
+
 template <typename Sn, typename EntT, typename ExiT, typename... Snn, typename... Con, typename... TacT>
-auto state (Sn, EntT &&en, ExiT &&ex, Transition<Snn, Con, TacT> &&... tra)
+auto state (Sn /* stateName */, EntryActions<EntT> &&en, ExitActions<ExiT> &&ex, Transition<Snn, Con, TacT> &&... tra)
 {
-        return State<Sn, EntT, decltype (std::make_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::make_tuple (tra...),
-                                                                           std::forward<ExiT> (ex));
+        return State<Sn, EntryActions<EntT>, decltype (std::make_tuple (tra...)), ExitActions<ExiT>> (
+                std::forward<EntryActions<EntT>> (en), std::make_tuple (tra...), std::forward<ExitActions<ExiT>> (ex));
 }
 
-template <typename Sn, typename EntT, typename ExiT> auto state (Sn, EntT &&en, ExiT &&ex)
+template <typename Sn, typename EntT, typename ExiT> auto state (Sn /* stateName */, EntryActions<EntT> &&en, ExitActions<ExiT> &&ex)
 {
-        return State<Sn, EntT, decltype (std::make_tuple ()), ExiT> (std::forward<EntT> (en), std::make_tuple (), std::forward<ExiT> (ex));
+        return State<Sn, EntryActions<EntT>, decltype (std::make_tuple ()), ExitActions<ExiT>> (
+                std::forward<EntryActions<EntT>> (en), std::make_tuple (), std::forward<ExitActions<ExiT>> (ex));
 }
 
-template <typename... Acts> constexpr auto entry (Acts &&... act) { return std::make_tuple (act...); }
-template <typename Act> constexpr auto entry (Act &&act) { return std::forward<Act> (act); }
-
-template <typename... Act> constexpr auto exit (Act &&... act) { return std::make_tuple (act...); }
-template <typename Act> constexpr auto exit (Act &&act) { return std::forward<Act> (act); }
+template <typename Sn, typename EntT> auto state (Sn /* stateName */, EntryActions<EntT> &&en)
+{
+        return State<Sn, EntryActions<EntT>, decltype (std::make_tuple ()), ExitActions<int>> (std::forward<EntryActions<EntT>> (en),
+                                                                                               std::make_tuple (), ExitActions<int>{0});
+}
 
 /****************************************************************************/
 
@@ -273,14 +297,14 @@ template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT,
 
                 forCurrentState ([&ev, &stateChanged, &stateChangedAtLeastOnce, machine = this] (auto &state) {
                         if (!machine->entryRun) {
-                                runActions (ev, state.entryActions);
+                                runActions (ev, state.entryActions.act);
                                 machine->entryRun = true;
                                 return;
                         }
 
                         forMatchingTransition (
                                 ev, state.transitions, [&ev, &stateChanged, &stateChangedAtLeastOnce, machine, &state] (auto &transition) {
-                                        runActions (ev, state.exitActions);
+                                        runActions (ev, state.exitActions.act);
                                         transition.runTransitionActions (ev);
                                         machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
                                         machine->currentStateName = std::remove_reference_t<decltype (transition)>::Name::c_str ();

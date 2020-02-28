@@ -60,6 +60,12 @@ TEST_CASE ("First test", "[Instantiation]")
                 // Transition without actions
                 state ("B"_STATE, entry (At ("Z")), exit (At ("A")), transition ("C"_STATE, [] (int i) { return i == 3; })),
 
+                // State without transitions
+                state ("C"_STATE, entry (At ("Z")), exit (At ("A"))),
+
+                /// No transition, no exit actions
+                // state ("C"_STATE, entry (At ("Z"))),
+
                 // TODO Transition without actions and without condition (always true)
                 // state ("C"_STATE, entry (At ("Z")), exit (At ("DT")), transition ("D"_STATE)),
 

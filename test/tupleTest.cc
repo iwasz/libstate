@@ -146,40 +146,36 @@ int main ()
 -O3
     FILE SIZE        VM SIZE
  --------------  --------------
-  37.9%  10.5Ki  67.9%  10.4Ki    .text
-  17.4%  4.81Ki   0.0%       0    [Unmapped]
-  11.1%  3.08Ki   0.0%       0    .strtab
-   8.6%  2.38Ki   0.0%       0    .symtab
-   3.4%     971   1.6%     258    [14 Others]
-   2.5%     696   4.0%     632    .eh_frame
-   2.4%     689   4.4%     689    [LOAD #2 [R]]
-   2.2%     633   3.6%     569    .dynstr
-   2.1%     592   3.4%     528    .dynamic
-   2.0%     568   3.2%     504    .dynsym
-   1.7%     486   2.7%     422    .rodata
-   1.4%     400   2.1%     336    .rela.plt
-   1.2%     341   0.0%       0    .shstrtab
-   1.1%     304   1.5%     240    .plt
-   1.0%     291   1.4%     227    .gcc_except_table
-   1.0%     280   1.4%     216    .rela.dyn
-   0.8%     224   1.0%     160    .gnu.version_r
-   0.7%     200   0.9%     136    .got.plt
+  41.8%  10.5Ki  67.9%  10.4Ki    .text
+  19.2%  4.81Ki   0.0%       0    [Unmapped]
+   6.5%  1.63Ki   0.0%       0    .symtab
+   5.0%  1.25Ki   0.0%       0    .strtab
+   3.8%     971   1.6%     258    [14 Others]
+   2.7%     696   4.0%     632    .eh_frame
+   2.7%     689   4.4%     689    [LOAD #2 [R]]
+   2.5%     633   3.6%     569    .dynstr
+   2.3%     592   3.4%     528    .dynamic
+   2.2%     568   3.2%     504    .dynsym
+   1.9%     486   2.7%     422    .rodata
+   1.6%     400   2.1%     336    .rela.plt
+   1.3%     341   0.0%       0    .shstrtab
+   1.2%     304   1.5%     240    .plt
+   1.1%     291   1.4%     227    .gcc_except_table
+   1.1%     280   1.4%     216    .rela.dyn
+   0.9%     224   1.0%     160    .gnu.version_r
+   0.8%     200   0.9%     136    .got.plt
    0.6%     156   0.6%      92    .eh_frame_hdr
    0.5%     128   0.0%       0    [ELF Headers]
    0.4%     106   0.3%      42    .gnu.version
- 100.0%  27.7Ki 100.0%  15.4Ki    TOTAL
+ 100.0%  25.1Ki 100.0%  15.4Ki    TOTAL
 
-
-
-
--O0 stripped
     FILE SIZE        VM SIZE
  --------------  --------------
-  51.0%  83.0Ki  60.5%  82.9Ki    .text
-  23.6%  38.4Ki  28.0%  38.4Ki    .eh_frame
+  51.2%  83.3Ki  60.5%  83.2Ki    .text
+  23.7%  38.6Ki  28.0%  38.5Ki    .eh_frame
    6.9%  11.2Ki   0.0%       0    .strtab
-   5.7%  9.29Ki   6.7%  9.22Ki    .eh_frame_hdr
-   4.4%  7.15Ki   0.0%       0    [Unmapped]
+   5.7%  9.33Ki   6.7%  9.27Ki    .eh_frame_hdr
+   4.1%  6.62Ki   0.0%       0    [Unmapped]
    3.2%  5.22Ki   0.0%       0    .symtab
    0.9%  1.49Ki   1.0%  1.43Ki    .dynstr
    0.6%     975   0.2%     262    [14 Others]
@@ -197,5 +193,6 @@ int main ()
    0.1%     134   0.0%      70    .gnu.version
    0.1%     128   0.0%       0    [ELF Headers]
  100.0%   162Ki 100.0%   137Ki    TOTAL
+
 
 */
