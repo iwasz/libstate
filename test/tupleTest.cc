@@ -146,54 +146,56 @@ int main ()
 -O3
     FILE SIZE        VM SIZE
  --------------  --------------
-  43.8%  13.5Ki  73.0%  13.5Ki    .text
-  18.5%  5.73Ki   0.0%       0    [Unmapped]
-   8.4%  2.58Ki   0.0%       0    .strtab
-   6.6%  2.03Ki   0.0%       0    .symtab
-   3.3%  1.03Ki   1.4%     273    [15 Others]
-   2.3%     720   3.5%     656    .eh_frame
-   2.2%     689   3.6%     689    [LOAD #2 [R]]
-   2.0%     633   3.0%     569    .dynstr
-   1.9%     592   2.8%     528    .dynamic
-   1.8%     568   2.7%     504    .dynsym
-   1.4%     447   2.0%     383    .rodata
-   1.3%     400   1.8%     336    .rela.plt
-   1.1%     354   0.0%       0    .shstrtab
-   1.0%     328   1.4%     264    .rela.dyn
-   1.0%     304   1.3%     240    .plt
-   0.9%     291   1.2%     227    .gcc_except_table
-   0.7%     224   0.8%     160    .gnu.version_r
-   0.6%     200   0.7%     136    .got.plt
-   0.5%     156   0.5%      92    .eh_frame_hdr
-   0.4%     128   0.0%       0    [ELF Headers]
-   0.3%     106   0.2%      42    .gnu.version
- 100.0%  30.9Ki 100.0%  18.4Ki    TOTAL
+  37.9%  10.5Ki  67.9%  10.4Ki    .text
+  17.4%  4.81Ki   0.0%       0    [Unmapped]
+  11.1%  3.08Ki   0.0%       0    .strtab
+   8.6%  2.38Ki   0.0%       0    .symtab
+   3.4%     971   1.6%     258    [14 Others]
+   2.5%     696   4.0%     632    .eh_frame
+   2.4%     689   4.4%     689    [LOAD #2 [R]]
+   2.2%     633   3.6%     569    .dynstr
+   2.1%     592   3.4%     528    .dynamic
+   2.0%     568   3.2%     504    .dynsym
+   1.7%     486   2.7%     422    .rodata
+   1.4%     400   2.1%     336    .rela.plt
+   1.2%     341   0.0%       0    .shstrtab
+   1.1%     304   1.5%     240    .plt
+   1.0%     291   1.4%     227    .gcc_except_table
+   1.0%     280   1.4%     216    .rela.dyn
+   0.8%     224   1.0%     160    .gnu.version_r
+   0.7%     200   0.9%     136    .got.plt
+   0.6%     156   0.6%      92    .eh_frame_hdr
+   0.5%     128   0.0%       0    [ELF Headers]
+   0.4%     106   0.3%      42    .gnu.version
+ 100.0%  27.7Ki 100.0%  15.4Ki    TOTAL
+
 
 
 
 -O0 stripped
     FILE SIZE        VM SIZE
  --------------  --------------
-  55.8%  83.9Ki  60.8%  83.9Ki    .text
-  25.5%  38.3Ki  27.7%  38.2Ki    .eh_frame
-   6.9%  10.4Ki   0.0%       0    [Unmapped]
-   6.1%  9.24Ki   6.7%  9.18Ki    .eh_frame_hdr
-   1.0%  1.49Ki   1.0%  1.43Ki    .dynstr
-   0.6%     904   0.6%     840    .dynsym
+  51.0%  83.0Ki  60.5%  82.9Ki    .text
+  23.6%  38.4Ki  28.0%  38.4Ki    .eh_frame
+   6.9%  11.2Ki   0.0%       0    .strtab
+   5.7%  9.29Ki   6.7%  9.22Ki    .eh_frame_hdr
+   4.4%  7.15Ki   0.0%       0    [Unmapped]
+   3.2%  5.22Ki   0.0%       0    .symtab
+   0.9%  1.49Ki   1.0%  1.43Ki    .dynstr
+   0.6%     975   0.2%     262    [14 Others]
+   0.5%     904   0.6%     840    .dynsym
    0.5%     829   0.5%     765    .gcc_except_table
-   0.5%     771   0.1%     186    [12 Others]
-   0.5%     712   0.5%     648    .rela.plt
+   0.4%     712   0.5%     648    .rela.plt
    0.4%     688   0.5%     688    [LOAD #2 [R]]
    0.4%     592   0.4%     528    .dynamic
+   0.3%     530   0.3%     466    .rodata
    0.3%     512   0.3%     448    .plt
-   0.3%     490   0.3%     426    .rodata
-   0.2%     325   0.0%       0    .shstrtab
+   0.2%     341   0.0%       0    .shstrtab
    0.2%     304   0.2%     240    .got.plt
    0.2%     280   0.2%     216    .rela.dyn
    0.1%     208   0.1%     144    .gnu.version_r
    0.1%     134   0.0%      70    .gnu.version
    0.1%     128   0.0%       0    [ELF Headers]
-   0.1%     104   0.0%      40    .got
-   0.1%     100   0.0%      36    .gnu.hash
- 100.0%   150Ki 100.0%   137Ki    TOTAL
+ 100.0%   162Ki 100.0%   137Ki    TOTAL
+
 */
