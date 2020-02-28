@@ -434,25 +434,25 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         REQUIRE (m.getCurrentStateIndex () == "E"_STATE.getIndex ());
 
         /*--------------------------------------------------------------------------*/
-        // E -> F -> G
+        // E -> F
         // Negative check
         m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"});
         // We stay in E
         REQUIRE (m.getCurrentStateIndex () == "E"_STATE.getIndex ());
 
         m.run (Event{"Stary", "kot", "ma", "psa", "i", "parasol"});
-        REQUIRE (m.getCurrentStateIndex () == "G"_STATE.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
 
         /*--------------------------------------------------------------------------*/
         // F -> G
         // Negative
-        // REQUIRE (!m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"}));
-        // REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
+        REQUIRE (!m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"}));
+        REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
 
-        // REQUIRE (!m.run (Event{"kot"}));
-        // REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
+        REQUIRE (!m.run (Event{"kot"}));
+        REQUIRE (m.getCurrentStateIndex () == "F"_STATE.getIndex ());
 
-        // // Positive
-        // m.run (Event{"Stary", "kot", "ma", "parasol", "i", "psa"});
-        // REQUIRE (m.getCurrentStateIndex () == "G"_STATE.getIndex ());
+        // Positive
+        m.run (Event{"Stary", "kot", "ma", "parasol", "i", "psa"});
+        REQUIRE (m.getCurrentStateIndex () == "G"_STATE.getIndex ());
 }

@@ -168,6 +168,7 @@ template <typename Act> constexpr auto exit (Act &&act) { return std::forward<Ac
 
 /****************************************************************************/
 
+// TODO this is not implemented. Rethink.
 struct Instrumentation {
         template <typename... Args> static void log (Args &&... args) {}
 };
@@ -259,6 +260,7 @@ template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT,
                         if (!machine->entryRun) {
                                 runActions (ev, state.entryActions);
                                 machine->entryRun = true;
+                                return;
                         }
 
                         forMatchingTransition (
@@ -267,13 +269,13 @@ template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT,
                                         transition.runTransitionActions (ev);
                                         machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
                                         machine->currentStateName = std::remove_reference_t<decltype (transition)>::Name::c_str ();
-                                        Ins::log ("State :", machine->currentStateName);
+                                        // Ins::log ("State :", machine->currentStateName);
                                         stateChangedAtLeastOnce = stateChanged = true;
                                         machine->entryRun = false;
                                 });
                 });
 
-                if (!stateChanged) {
+                if (!stateChanged || entryRun) {
                         break;
                 }
         }

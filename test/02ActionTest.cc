@@ -53,7 +53,6 @@ TEST_CASE ("Check if all called", "[Action]")
 
         );
 
-        // TODO this should be called with ampty queue, but it does not work, because checks are inside loop iterating over events.
         m.run (0);
         REQUIRE (m.getCurrentStateIndex () == "INIT"_STATE.getIndex ());
         REQUIRE (results.at (0) == "INIT entry");
