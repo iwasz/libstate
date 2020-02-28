@@ -95,9 +95,7 @@ TEST_CASE ("Machine instance", "[Instantiation]")
                                  transition (
                                          "FINAL"_STATE, [] (int ev) { return ev == 4; }, At ("Ble"))),
 
-                          state ("FINAL"_STATE, entry ([] () {}, [] () {}), exit ([] (auto) {}, [] (auto) {}),
-                                 transition (
-                                         ""_STATE, [] (int ev) { return false; }, At ("")))
+                          state ("FINAL"_STATE, entry ([] () {}, [] () {}), exit ([] (auto) {}, [] (auto) {}))
 
         );
 

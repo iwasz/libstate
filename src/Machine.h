@@ -148,16 +148,28 @@ template <typename Act> void runSomeActions (Act &actions) { runActions (actions
 //         return State<Sn, EntT, TraT, ExiT> (std::forward<EntT> (en), std::forward<TraT> (tra), std::forward<ExiT> (ex));
 // }
 
-template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state (EntT &&en, ExiT &&ex, Tra &&... tra)
+// template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state (EntT &&en, ExiT &&ex, Tra &&... tra)
+// {
+//         return State<Sn, EntT, decltype (std::make_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::make_tuple (tra...),
+//                                                                            std::forward<ExiT> (ex));
+// }
+
+// template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state (Sn, EntT &&en, ExiT &&ex, Tra &&... tra)
+// {
+//         return State<Sn, EntT, decltype (std::make_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::make_tuple (tra...),
+//                                                                            std::forward<ExiT> (ex));
+// }
+
+template <typename Sn, typename EntT, typename ExiT, typename... Snn, typename... Con, typename... TacT>
+auto state (Sn, EntT &&en, ExiT &&ex, Transition<Snn, Con, TacT> &&... tra)
 {
         return State<Sn, EntT, decltype (std::make_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::make_tuple (tra...),
                                                                            std::forward<ExiT> (ex));
 }
 
-template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state (Sn, EntT &&en, ExiT &&ex, Tra &&... tra)
+template <typename Sn, typename EntT, typename ExiT> auto state (Sn, EntT &&en, ExiT &&ex)
 {
-        return State<Sn, EntT, decltype (std::make_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::make_tuple (tra...),
-                                                                           std::forward<ExiT> (ex));
+        return State<Sn, EntT, decltype (std::make_tuple ()), ExiT> (std::forward<EntT> (en), std::make_tuple (), std::forward<ExiT> (ex));
 }
 
 template <typename... Acts> constexpr auto entry (Acts &&... act) { return std::make_tuple (act...); }
@@ -244,9 +256,12 @@ namespace detail {
 
 template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (Ev const &ev, TraT &transitions, Fun &&function)
 {
-        std::apply (
-                [&ev, &function] (auto &... transition) { detail::runIfMatchingTransition (std::forward<Fun> (function), ev, transition...); },
-                transitions);
+        // If there are any transitions at all
+        if constexpr (std::tuple_size<TraT>::value > 0) {
+                std::apply ([&ev, &function] (
+                                    auto &... transition) { detail::runIfMatchingTransition (std::forward<Fun> (function), ev, transition...); },
+                            transitions);
+        }
 }
 
 template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT, Ins>::run (Ev const &ev)
