@@ -168,9 +168,13 @@ template <typename Act> constexpr auto exit (Act &&act) { return std::forward<Ac
 
 /****************************************************************************/
 
-template <typename StaT> class Machine {
+struct Instrumentation {
+        template <typename... Args> static void log (Args &&... args) {}
+};
+
+template <typename StaT, typename Ins> class Machine {
 public:
-        Machine (StaT states) : states{std::move (states)} {}
+        Machine (StaT states /* , Ins ins */) : states{std::move (states)} /* , instrumentation{std::move (ins)} */ {}
 
         /// returns whether the state was changed
         template <typename Ev> bool run (Ev const &ev);
@@ -184,6 +188,7 @@ public:
         gsl::czstring<> getCurrentStateName () const { return currentStateName; }
 
         StaT states;
+        // Ins instrumentation;
 
 private:
         bool entryRun{};
@@ -191,7 +196,12 @@ private:
         gsl::czstring<> currentStateName{std::tuple_element<0, StaT>::type::Name::c_str ()};
 };
 
-template <typename... Sta> constexpr auto machine (Sta &&... states) { return Machine (std::make_tuple (states...)); }
+template <typename... Sta, typename Ins = Instrumentation> constexpr auto machine (Sta &&... states /* , Ins &&ins = {} */)
+{
+        // return Machine<decltype (std::make_tuple (states...)), Ins> (std::make_tuple (states...));
+        // return Machine (std::make_tuple (std::forward<Sta> (states)...), std::forward<Ins> (ins));
+        return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), Ins> (std::make_tuple (std::forward<Sta> (states)...));
+}
 
 namespace detail {
         template <typename Fun, typename Sta, typename... Rst>
@@ -209,7 +219,7 @@ namespace detail {
 
 } // namespace detail
 
-template <typename StaT> template <typename Fun> void Machine<StaT>::forCurrentState (Fun &&function)
+template <typename StaT, typename Ins> template <typename Fun> void Machine<StaT, Ins>::forCurrentState (Fun &&function)
 {
         std::apply (
                 [&function, this] (auto &... state) { detail::runIfCurrentState (currentStateIndex, std::forward<Fun> (function), state...); },
@@ -238,7 +248,7 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
                 transitions);
 }
 
-template <typename StaT> template <typename Ev> bool Machine<StaT>::run (Ev const &ev)
+template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT, Ins>::run (Ev const &ev)
 {
         bool stateChangedAtLeastOnce{};
 
@@ -257,6 +267,7 @@ template <typename StaT> template <typename Ev> bool Machine<StaT>::run (Ev cons
                                         transition.runTransitionActions (ev);
                                         machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
                                         machine->currentStateName = std::remove_reference_t<decltype (transition)>::Name::c_str ();
+                                        Ins::log ("State :", machine->currentStateName);
                                         stateChangedAtLeastOnce = stateChanged = true;
                                         machine->entryRun = false;
                                 });

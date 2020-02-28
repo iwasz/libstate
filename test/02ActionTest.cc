@@ -22,12 +22,15 @@ using namespace std::string_literals;
 using namespace std::chrono_literals;
 using namespace ls;
 
+struct Instrumentation {
+        template <typename... Args> static void log (Args &&... args) {}
+};
+
 /**
  * Machine instance and a few features tested.
  */
 TEST_CASE ("Check if all called", "[Action]")
 {
-
         std::vector<std::string> results;
 
         // TODO this worked, and stoped to compile after introducing ErasedTransitions
