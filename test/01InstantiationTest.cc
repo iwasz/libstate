@@ -61,7 +61,11 @@ TEST_CASE ("First test", "[Instantiation]")
                 state ("B"_S, entry (At ("Z")), exit (At ("A")), transition ("C"_S, [] (int i) { return i == 3; })),
 
                 // State without transitions
-                state ("C"_S, entry (At ("Z")), exit (At ("A"))),
+                state ("C"_S, entry (At ("Z")), exit (At ("A"))), // TODO this should not compile!
+
+                state ("D"_S, entry (At ("Z")),
+                       transition (
+                               ""_S, [] (int ev) { return false; }, At (""))), // TODO this should not compile!
 
                 /// No transition, no exit actions
                 // state ("C"_S, entry (At ("Z"))),

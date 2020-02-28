@@ -379,7 +379,7 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         };
 
         auto m = machine (
-                state ("INIT"_S, entry (At ("INIT entry")), exit (At ("INIT exit")), transition ("B"_S, size (1), At ("transition to B"))),
+                state ("INIT"_S, entry (At ("INIT entry")), transition ("B"_S, size (1), At ("transition to B"))),
 
                 state ("B"_S, entry (At ("B entry")), exit (At ("B exit")), transition ("C"_S, has ("%och%"), At ("transition to C"))),
 
