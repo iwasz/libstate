@@ -314,6 +314,12 @@ template <typename EventT> bool like (EventT const &event, gsl::czstring<> condi
 
         } while (resume);
 
+        if (stripInput == StripInput::STRIP) {
+                while (ei < event.size () && std::isspace (event.at (ei))) {
+                        ++ei;
+                }
+        }
+
         return (ci == condition.size ()) && (ei == event.size ());
 }
 
@@ -325,6 +331,11 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         using namespace std::string_literals;
         REQUIRE (like ("Ala"s, "%la"));
         REQUIRE (like (" Ala"s, "%la"));
+        REQUIRE (like ("\r\nAla"s, "Ala"));
+        REQUIRE (like (" Ala"s, "Ala"));
+        REQUIRE (like (" Ala "s, "Ala"));
+        REQUIRE (like (" Ala \r\n"s, "Ala"));
+        REQUIRE (like (" Ala \r\n"s, "A%a"));
 
         /// Checks if event collection has certain size
         auto size = [] (size_t s) { return [s] (auto const &events) { return events.size () == s; }; };
