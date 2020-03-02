@@ -9,6 +9,8 @@
 #include "Machine.h"
 #include "Utils.h"
 #include "catch.hpp"
+#include <array>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <type_traits>
@@ -167,6 +169,7 @@ TEST_CASE ("Condition", "[Event queue]")
         REQUIRE (m.getCurrentStateIndex () == "G"_S.getIndex ());
 }
 
+namespace op {
 template <typename ConA, typename ConB> auto operator&& (ConA conditionA, ConB conditionB)
 {
         return [cA = std::move (conditionA), cB = std::move (conditionB)] (auto const &events) { return cA (events) && cB (events); };
@@ -181,12 +184,15 @@ template <typename ConA> auto operator! (ConA conditionA)
 {
         return [cA = std::move (conditionA)] (auto const &events) { return !(cA (events)); };
 }
+} // namespace op
 
 /**
  *
  */
 TEST_CASE ("AndOr", "[Event queue]")
 {
+        using namespace op;
+
         /// Checks if event collection has certain size
         auto size = [] (size_t s) { return [s] (auto const &events) { return events.size () == s; }; };
 
@@ -247,21 +253,48 @@ TEST_CASE ("AndOr", "[Event queue]")
         REQUIRE (m.getCurrentStateIndex () == "D"_S.getIndex ());
 }
 
+template <typename OutputIterator, typename Parm, typename... Rst>
+void doStore (OutputIterator const &begin, OutputIterator const &end, int paramNumber, int currentParamNumber, Parm &param, Rst &... rest)
+{
+        if (paramNumber == currentParamNumber) {
+                if constexpr (std::is_same_v<Parm, int>) {
+                        std::array<char, std::numeric_limits<int>::digits + 2> tmp{};
+                        auto it = std::copy (begin, end, tmp.begin ());
+                        *it = '\0';
+                        param = atoi (tmp.data ());
+                }
+                else {
+                        param.clear ();
+                        std::copy (begin, end, std::back_inserter (param));
+                }
+        }
+
+        if constexpr (sizeof...(rest) > 0) {
+                doStore (begin, end, paramNumber, currentParamNumber + 1, rest...);
+        }
+}
+
 enum class StripInput { DONT_STRIP, STRIP };
 
 /**
  * Like condition (like in SQL), but without '_'. Only '%' works.
  */
-template <typename EventT> bool like (EventT const &event, gsl::czstring<> conditionStr, StripInput stripInput = StripInput::STRIP)
+template <typename EventT, typename... Parm>
+bool like (EventT const &event, gsl::czstring<> conditionStr, StripInput stripInput = StripInput::STRIP, Parm &... params)
 {
         std::string_view condition{conditionStr};
 
         size_t ei = 0;
         size_t ci = 0;
+        size_t parseStart = 0;
+        size_t parseEnd = 0;
+        size_t cSize = condition.size ();
+        size_t eSize = event.size ();
+        int currentParsedString{};
 
-        // Stripuj początek.
+        // Ltrim
         if (stripInput == StripInput::STRIP) {
-                while (ei < event.size () && std::isspace (event.at (ei))) {
+                while (ei < eSize && std::isspace (event.at (ei))) {
                         ++ei;
                 }
         }
@@ -270,39 +303,43 @@ template <typename EventT> bool like (EventT const &event, gsl::czstring<> condi
         do {
                 resume = false;
 
-                // Normalny tekst, zgadzają się.
-                while (ei < event.size () && ci < condition.size () && (event.at (ei) == condition.at (ci))) {
+                // Text matches letter by letter.
+                while (ei < eSize && ci < cSize && (int (event.at (ei)) == int (condition.at (ci)))) {
                         ++ei;
                         ++ci;
                 }
 
-                // Wtem w "condition natrafiamy na '%'
-                if (ci < condition.size () && condition.at (ci) == '%') {
+                parseStart = ei;
+
+                // '%' character encountered
+                if (ci < cSize && int (condition.at (ci)) == int ('%')) {
                         resume = true;
                         ++ci;
 
-                        if (ci >= condition.size ()) {
-                                return true;
+                        if (ci >= cSize) {
+                                parseEnd = ei = eSize;
+                                goto store;
                         }
 
                         do {
-                                while (ei < event.size () && ci < condition.size () && (event.at (ei) != condition.at (ci))) {
+                                while (ei < eSize && ci < cSize && (int (event.at (ei)) != int (condition.at (ci)))) {
                                         ++ei;
                                 }
 
+                                parseEnd = ei;
+
                                 // Skończyło się wejście.
-                                if (ei >= event.size ()) {
+                                if (ei >= eSize) {
                                         return false;
                                 }
 
                                 size_t ci1 = ci;
-                                while (ei < event.size () && ci1 < condition.size () && condition.at (ci1) != '%' && condition.at (ci1) != '_'
-                                       && (event.at (ei) == condition.at (ci1))) {
+                                while (ei < eSize && ci1 < cSize && condition.at (ci1) != '%' && (event.at (ei) == condition.at (ci1))) {
                                         ++ei;
                                         ++ci1;
                                 }
 
-                                if (ci1 < condition.size () && condition.at (ci1) != '%' && condition.at (ci1) != '_') {
+                                if (ci1 < cSize && condition.at (ci1) != '%') {
                                         continue;
                                 }
 
@@ -312,21 +349,27 @@ template <typename EventT> bool like (EventT const &event, gsl::czstring<> condi
                         } while (true);
                 }
 
+        store:
+                if constexpr (sizeof...(params) > 0) {
+                        doStore (event.cbegin () + parseStart, event.cbegin () + parseEnd, currentParsedString++, 0, params...);
+                }
+
         } while (resume);
 
+        // Rtrim
         if (stripInput == StripInput::STRIP) {
-                while (ei < event.size () && std::isspace (event.at (ei))) {
+                while (ei < eSize && std::isspace (event.at (ei))) {
                         ++ei;
                 }
         }
 
-        return (ci == condition.size ()) && (ei == event.size ());
+        return (ci == cSize) && (ei == eSize);
 }
 
 /**
  * For modems and GNSSes
  */
-TEST_CASE ("LikeCondition", "[Event queue]")
+TEST_CASE ("LikeFunction", "[Event queue]")
 {
         using namespace std::string_literals;
         REQUIRE (like ("Ala"s, "%la"));
@@ -336,6 +379,110 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         REQUIRE (like (" Ala "s, "Ala"));
         REQUIRE (like (" Ala \r\n"s, "Ala"));
         REQUIRE (like (" Ala \r\n"s, "A%a"));
+
+        REQUIRE (like (">41 0C 00 40 "s, "%41 0C%"));
+        REQUIRE (like ("\r>41 0C 00 40 "s, "%41 0C%"));
+        REQUIRE (like ("\r\n>41 0C 00 40 "s, "%41 0C%"));
+        REQUIRE (like (">41 0C 00 40\r"s, "%41 0C%"));
+        REQUIRE (like (">41 0C 00 40\r\n"s, "%41 0C%"));
+        REQUIRE (like ("\r\n>41 0C 00 40\r\n"s, "%41 0C%"));
+        REQUIRE (like ("41 0C 00 40 "s, "%41 0C%"));
+        REQUIRE (like ("\r41 0C 00 40 "s, "%41 0C%"));
+        REQUIRE (like ("\r\n41 0C 00 40 "s, "%41 0C%"));
+        REQUIRE (like ("41 0C 00 40\r"s, "%41 0C%"));
+        REQUIRE (like ("41 0C 00 40\r\n"s, "%41 0C%"));
+        REQUIRE (like ("\r\n41 0C 00 40\r\n"s, "%41 0C%"));
+        REQUIRE (like (">41 0C 00 00 "s, "%41 0C%"));
+        REQUIRE (like ("\r>41 0C 00 00 "s, "%41 0C%"));
+        REQUIRE (like ("\r\n>41 0C 00 00 "s, "%41 0C%"));
+        REQUIRE (like (">41 0C 00 00\r"s, "%41 0C%"));
+        REQUIRE (like (">41 0C 00 00\r\n"s, "%41 0C%"));
+        REQUIRE (like ("\r\n>41 0C 00 00\r\n"s, "%41 0C%"));
+        REQUIRE (like ("41 0C 00 00 "s, "%41 0C%"));
+        REQUIRE (like ("\r41 0C 00 00 "s, "%41 0C%"));
+        REQUIRE (like ("\r\n41 0C 00 00 "s, "%41 0C%"));
+        REQUIRE (like ("41 0C 00 00\r"s, "%41 0C%"));
+        REQUIRE (like ("41 0C 00 00\r\n"s, "%41 0C%"));
+        REQUIRE (like ("\r\n41 0C 00 00\r\n"s, "%41 0C%"));
+
+        REQUIRE (like ("+CREG: 1,0"s, "+CREG: %,0%", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CREG: 0,0"s, "+CREG: %,0%", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CREG: 0,0\r\n"s, "+CREG: %,0%", StripInput::DONT_STRIP));
+
+        REQUIRE (like ("99:bb:66|aa|77"s, "99:%:66|%|77", StripInput::DONT_STRIP));
+        REQUIRE (like ("99:b:66|a|77"s, "99:%:66|%|77", StripInput::DONT_STRIP));
+        REQUIRE (like ("99::66||77"s, "99:%:66|%|77", StripInput::DONT_STRIP));
+        REQUIRE (like ("99:bb:77:66|aa|78|77"s, "99:%:66|%|77", StripInput::DONT_STRIP));
+        REQUIRE (!like ("99:bb:77:66|aa|78|79"s, "99:%:66|%|77", StripInput::DONT_STRIP));
+
+        REQUIRE (like ("+CSQ: 99:0"s, "+CSQ: 99:%", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CSQ: 99:2345"s, "+CSQ: 99:%", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CSQ: 99:"s, "+CSQ: 99:%", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CSQ: 99:JHGHJ:88"s, "+CSQ: 99:%", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CSQ: 99:99"s, "+CSQ: 99:%", StripInput::DONT_STRIP));
+        REQUIRE (!like ("+CSQ: 98:0"s, "+CSQ: 99:%", StripInput::DONT_STRIP));
+        REQUIRE (!like ("CSQ: 99:0"s, "+CSQ: 99:%", StripInput::DONT_STRIP));
+
+        REQUIRE (like ("+CSQ: 99:0:66"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like ("+CSQ: 99:0:666"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CSQ: 99:2345:66"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CSQ: 99::66"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CSQ: 99:JHGHJ:88:66"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (like ("+CSQ: 99:99:66"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like ("+CSQ: 99:99#66"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like ("+CSQ: 98:0:66"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like ("CSQ: 99:0:66"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like ("+CSQ: 98:0"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like ("CSQ: 99:0"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like ("+CSQ: 98"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like ("CSQ: 99"s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+        REQUIRE (!like (""s, "+CSQ: 99:%:66", StripInput::DONT_STRIP));
+}
+
+TEST_CASE ("Like parsing", "[Event queue]")
+{
+        using namespace std::string_literals;
+        std::string s1, s2, s3;
+        REQUIRE (like ("+QISACK:123"s, "+QISACK:%", StripInput::STRIP, s1));
+        REQUIRE (s1 == "123"s);
+
+        REQUIRE (like ("+QISACK:321,456"s, "+QISACK:%,%", StripInput::STRIP, s1, s2));
+        REQUIRE (s1 == "321"s);
+        REQUIRE (s2 == "456"s);
+
+        REQUIRE (like ("+QISACK:321,456,555"s, "+QISACK:%,%,%", StripInput::STRIP, s1, s2));
+        REQUIRE (s1 == "321"s);
+        REQUIRE (s2 == "456"s);
+
+        REQUIRE (like ("+QISACK:321,456,555"s, "+QISACK:%,%,%", StripInput::STRIP, s1, s2, s3));
+        REQUIRE (s1 == "321"s);
+        REQUIRE (s2 == "456"s);
+        REQUIRE (s3 == "555"s);
+
+        int a{}, b{}, c{};
+        REQUIRE (like ("+QISACK:123"s, "+QISACK:%", StripInput::STRIP, a));
+        REQUIRE (a == 123);
+
+        REQUIRE (like ("+QISACK:321,456"s, "+QISACK:%,%", StripInput::STRIP, a, b));
+        REQUIRE (a == 321);
+        REQUIRE (b == 456);
+
+        REQUIRE (like ("+QISACK:321,456,555"s, "+QISACK:%,%,%", StripInput::STRIP, a, b));
+        REQUIRE (a == 321);
+        REQUIRE (b == 456);
+
+        REQUIRE (like ("+QISACK:321,456,555"s, "+QISACK:%,%,%", StripInput::STRIP, a, b, c));
+        REQUIRE (a == 321);
+        REQUIRE (b == 456);
+        REQUIRE (c == 555);
+}
+
+/**
+ * For modems and GNSSes
+ */
+TEST_CASE ("LikeCondition", "[Event queue]")
+{
+        using namespace std::string_literals;
 
         /// Checks if event collection has certain size
         auto size = [] (size_t s) { return [s] (auto const &events) { return events.size () == s; }; };
