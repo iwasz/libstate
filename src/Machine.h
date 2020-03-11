@@ -69,7 +69,7 @@ template <char... s> struct Name2 {
 template <char... s> constexpr Name2<s...> Name2_c{};
 
 // TODO This is a GNU extension. Provide macro as an option.
-template <typename C, C... c> constexpr auto operator""_S () { return Name2_c<c...>; }
+template <typename C, C... c> constexpr auto operator""_ST () { return Name2_c<c...>; }
 
 /****************************************************************************/
 
