@@ -31,53 +31,54 @@ int main ()
         auto eq = [] (const char *what) { return [what] (auto const &i) -> bool { return i == what; }; };
 
         auto m = machine (
-                state ("INIT"_S, entry (cmd ("INIT entry")), exit (cmd ("INIT exit")), transition ("A"_S, eq ("2"), res ("65"), res ("66")))
+                state ("INIT"_ST, entry (cmd ("INIT entry")), exit (cmd ("INIT exit")), transition ("A"_ST, eq ("2"), res ("65"), res ("66")))
 #define FULL 1
 #if FULL
                         ,
-                state ("A"_S, entry (cmd ("A entry")), exit (cmd ("A exit")), transition ("INIT"_S, eq ("-3"), res ("action"), res ("another")),
-                       transition ("B"_S, eq ("3"), res ("action"), res ("another"))),
+                state ("A"_ST, entry (cmd ("A entry")), exit (cmd ("A exit")),
+                       transition ("INIT"_ST, eq ("-3"), res ("action"), res ("another")),
+                       transition ("B"_ST, eq ("3"), res ("action"), res ("another"))),
 
-                state ("B"_S, entry (cmd ("B entry")), exit (cmd ("B exit")), transition ("A"_S, eq ("-4"), res ("action"), res ("another")),
-                       transition ("C"_S, eq ("4"), res ("action"), res ("another"))),
+                state ("B"_ST, entry (cmd ("B entry")), exit (cmd ("B exit")), transition ("A"_ST, eq ("-4"), res ("action"), res ("another")),
+                       transition ("C"_ST, eq ("4"), res ("action"), res ("another"))),
 
-                state ("C"_S, entry (cmd ("D entry")), exit (cmd ("D exit")), transition ("B"_S, eq ("-5"), res ("action"), res ("another")),
-                       transition ("D"_S, eq ("5"), res ("action"), res ("another"))),
+                state ("C"_ST, entry (cmd ("D entry")), exit (cmd ("D exit")), transition ("B"_ST, eq ("-5"), res ("action"), res ("another")),
+                       transition ("D"_ST, eq ("5"), res ("action"), res ("another"))),
 
-                state ("D"_S, entry (cmd ("E entry")), exit (cmd ("E exit")), transition ("C"_S, eq ("-6"), res ("action"), res ("another")),
-                       transition ("E"_S, eq ("6"), res ("action"), res ("another"))),
+                state ("D"_ST, entry (cmd ("E entry")), exit (cmd ("E exit")), transition ("C"_ST, eq ("-6"), res ("action"), res ("another")),
+                       transition ("E"_ST, eq ("6"), res ("action"), res ("another"))),
 
-                state ("E"_S, entry (cmd ("F entry")), exit (cmd ("F exit")), transition ("D"_S, eq ("-7"), res ("action"), res ("another")),
-                       transition ("F"_S, eq ("7"), res ("action"), res ("another"))),
+                state ("E"_ST, entry (cmd ("F entry")), exit (cmd ("F exit")), transition ("D"_ST, eq ("-7"), res ("action"), res ("another")),
+                       transition ("F"_ST, eq ("7"), res ("action"), res ("another"))),
 
-                state ("F"_S, entry (cmd ("G entry")), exit (cmd ("G exit")), transition ("E"_S, eq ("-8"), res ("action"), res ("another")),
-                       transition ("G"_S, eq ("8"), res ("action"), res ("another"))),
+                state ("F"_ST, entry (cmd ("G entry")), exit (cmd ("G exit")), transition ("E"_ST, eq ("-8"), res ("action"), res ("another")),
+                       transition ("G"_ST, eq ("8"), res ("action"), res ("another"))),
 
-                state ("G"_S, entry (cmd ("H entry")), exit (cmd ("H exit")), transition ("F"_S, eq ("-9"), res ("action"), res ("another")),
-                       transition ("H"_S, eq ("9"), res ("action"), res ("another"))),
+                state ("G"_ST, entry (cmd ("H entry")), exit (cmd ("H exit")), transition ("F"_ST, eq ("-9"), res ("action"), res ("another")),
+                       transition ("H"_ST, eq ("9"), res ("action"), res ("another"))),
 
-                state ("H"_S, entry (cmd ("I entry")), exit (cmd ("I exit")), transition ("G"_S, eq ("-10"), res ("action"), res ("another")),
-                       transition ("I"_S, eq ("10"), res ("action"), res ("another"))),
+                state ("H"_ST, entry (cmd ("I entry")), exit (cmd ("I exit")), transition ("G"_ST, eq ("-10"), res ("action"), res ("another")),
+                       transition ("I"_ST, eq ("10"), res ("action"), res ("another"))),
 
-                state ("I"_S, entry (cmd ("J entry")), exit (cmd ("J exit")), transition ("H"_S, eq ("-11"), res ("action"), res ("another")),
-                       transition ("J"_S, eq ("11"), res ("action"), res ("another"))),
+                state ("I"_ST, entry (cmd ("J entry")), exit (cmd ("J exit")), transition ("H"_ST, eq ("-11"), res ("action"), res ("another")),
+                       transition ("J"_ST, eq ("11"), res ("action"), res ("another"))),
 
-                state ("J"_S, entry (cmd ("K entry")), exit (cmd ("K exit")), transition ("I"_S, eq ("-12"), res ("action"), res ("another")),
-                       transition ("K"_S, eq ("12"), res ("action"), res ("another"))),
+                state ("J"_ST, entry (cmd ("K entry")), exit (cmd ("K exit")), transition ("I"_ST, eq ("-12"), res ("action"), res ("another")),
+                       transition ("K"_ST, eq ("12"), res ("action"), res ("another"))),
 
-                state ("K"_S, entry (cmd ("L entry")), exit (cmd ("L exit")), transition ("J"_S, eq ("-13"), res ("action"), res ("another")),
-                       transition ("L"_S, eq ("13"), res ("action"), res ("another"))),
+                state ("K"_ST, entry (cmd ("L entry")), exit (cmd ("L exit")), transition ("J"_ST, eq ("-13"), res ("action"), res ("another")),
+                       transition ("L"_ST, eq ("13"), res ("action"), res ("another"))),
 
-                state ("L"_S, entry (cmd ("M entry")), exit (cmd ("M exit")), transition ("K"_S, eq ("-14"), res ("action"), res ("another")),
-                       transition ("M"_S, eq ("14"), res ("action"), res ("another"))),
+                state ("L"_ST, entry (cmd ("M entry")), exit (cmd ("M exit")), transition ("K"_ST, eq ("-14"), res ("action"), res ("another")),
+                       transition ("M"_ST, eq ("14"), res ("action"), res ("another"))),
 
-                state ("M"_S, entry (cmd ("N entry")), exit (cmd ("N exit")), transition ("L"_S, eq ("-15"), res ("action"), res ("another")),
-                       transition ("N"_S, eq ("15"), res ("action"), res ("another"))),
+                state ("M"_ST, entry (cmd ("N entry")), exit (cmd ("N exit")), transition ("L"_ST, eq ("-15"), res ("action"), res ("another")),
+                       transition ("N"_ST, eq ("15"), res ("action"), res ("another"))),
 
-                state ("N"_S, entry (cmd ("O entry")), exit (cmd ("O exit")), transition ("M"_S, eq ("-16"), res ("action"), res ("another")),
-                       transition ("FINAL"_S, eq ("16"), res ("action"), res ("another"))),
+                state ("N"_ST, entry (cmd ("O entry")), exit (cmd ("O exit")), transition ("M"_ST, eq ("-16"), res ("action"), res ("another")),
+                       transition ("FINAL"_ST, eq ("16"), res ("action"), res ("another"))),
 
-                state ("FINAL"_S, entry (cmd ("FINAL entry")), exit (cmd ("")), transition ("FINAL"_S, eq ("-17")))
+                state ("FINAL"_ST, entry (cmd ("FINAL entry")), exit (cmd ("")), transition ("FINAL"_ST, eq ("-17")))
 #endif
         );
 

@@ -20,51 +20,51 @@ int main ()
 
         Machine2<std::string, HeapAllocator, 32> m;
 
-        m.state ("INIT"_S, entry (res ("INIT entry")), exit (res ("INIT exit")), m.transition ("B"_S, eq ("2"), res ("action")));
+        m.state ("INIT"_ST, entry (res ("INIT entry")), exit (res ("INIT exit")), m.transition ("B"_ST, eq ("2"), res ("action")));
 
-        m.state ("B"_S, entry (res ("B entry")), exit (res ("B exit")), m.transition ("INIT"_S, eq ("-3"), res ("action"), res ("another")),
-                 m.transition ("C"_S, eq ("3"), res ("action"), res ("another")));
+        m.state ("B"_ST, entry (res ("B entry")), exit (res ("B exit")), m.transition ("INIT"_ST, eq ("-3"), res ("action"), res ("another")),
+                 m.transition ("C"_ST, eq ("3"), res ("action"), res ("another")));
 
-        m.state ("C"_S, entry (res ("C entry")), exit (res ("C exit")), m.transition ("B"_S, eq ("-4"), res ("action"), res ("another")),
-                 m.transition ("D"_S, eq ("4"), res ("action"), res ("another")));
+        m.state ("C"_ST, entry (res ("C entry")), exit (res ("C exit")), m.transition ("B"_ST, eq ("-4"), res ("action"), res ("another")),
+                 m.transition ("D"_ST, eq ("4"), res ("action"), res ("another")));
 
-        m.state ("D"_S, entry (res ("D entry")), exit (res ("D exit")), m.transition ("C"_S, eq ("-5"), res ("action"), res ("another")),
-                 m.transition ("E"_S, eq ("5"), res ("action"), res ("another")));
+        m.state ("D"_ST, entry (res ("D entry")), exit (res ("D exit")), m.transition ("C"_ST, eq ("-5"), res ("action"), res ("another")),
+                 m.transition ("E"_ST, eq ("5"), res ("action"), res ("another")));
 
-        m.state ("E"_S, entry (res ("E entry")), exit (res ("E exit")), m.transition ("D"_S, eq ("-6"), res ("action"), res ("another")),
-                 m.transition ("F"_S, eq ("6"), res ("action"), res ("another")));
+        m.state ("E"_ST, entry (res ("E entry")), exit (res ("E exit")), m.transition ("D"_ST, eq ("-6"), res ("action"), res ("another")),
+                 m.transition ("F"_ST, eq ("6"), res ("action"), res ("another")));
 
-        m.state ("F"_S, entry (res ("F entry")), exit (res ("F exit")), m.transition ("E"_S, eq ("-7"), res ("action"), res ("another")),
-                 m.transition ("G"_S, eq ("7"), res ("action"), res ("another")));
+        m.state ("F"_ST, entry (res ("F entry")), exit (res ("F exit")), m.transition ("E"_ST, eq ("-7"), res ("action"), res ("another")),
+                 m.transition ("G"_ST, eq ("7"), res ("action"), res ("another")));
 
-        m.state ("G"_S, entry (res ("G entry")), exit (res ("G exit")), m.transition ("F"_S, eq ("-8"), res ("action"), res ("another")),
-                 m.transition ("H"_S, eq ("8"), res ("action"), res ("another")));
+        m.state ("G"_ST, entry (res ("G entry")), exit (res ("G exit")), m.transition ("F"_ST, eq ("-8"), res ("action"), res ("another")),
+                 m.transition ("H"_ST, eq ("8"), res ("action"), res ("another")));
 
-        m.state ("H"_S, entry (res ("H entry")), exit (res ("H exit")), m.transition ("G"_S, eq ("-9"), res ("action"), res ("another")),
-                 m.transition ("I"_S, eq ("9"), res ("action"), res ("another")));
+        m.state ("H"_ST, entry (res ("H entry")), exit (res ("H exit")), m.transition ("G"_ST, eq ("-9"), res ("action"), res ("another")),
+                 m.transition ("I"_ST, eq ("9"), res ("action"), res ("another")));
 
-        m.state ("I"_S, entry (res ("I entry")), exit (res ("I exit")), m.transition ("H"_S, eq ("-10"), res ("action"), res ("another")),
-                 m.transition ("J"_S, eq ("10"), res ("action"), res ("another")));
+        m.state ("I"_ST, entry (res ("I entry")), exit (res ("I exit")), m.transition ("H"_ST, eq ("-10"), res ("action"), res ("another")),
+                 m.transition ("J"_ST, eq ("10"), res ("action"), res ("another")));
 
-        m.state ("J"_S, entry (res ("J entry")), exit (res ("J exit")), m.transition ("I"_S, eq ("-11"), res ("action"), res ("another")),
-                 m.transition ("K"_S, eq ("11"), res ("action"), res ("another")));
+        m.state ("J"_ST, entry (res ("J entry")), exit (res ("J exit")), m.transition ("I"_ST, eq ("-11"), res ("action"), res ("another")),
+                 m.transition ("K"_ST, eq ("11"), res ("action"), res ("another")));
 
-        m.state ("K"_S, entry (res ("K entry")), exit (res ("K exit")), m.transition ("J"_S, eq ("-12"), res ("action"), res ("another")),
-                 m.transition ("L"_S, eq ("12"), res ("action"), res ("another")));
+        m.state ("K"_ST, entry (res ("K entry")), exit (res ("K exit")), m.transition ("J"_ST, eq ("-12"), res ("action"), res ("another")),
+                 m.transition ("L"_ST, eq ("12"), res ("action"), res ("another")));
 
-        m.state ("L"_S, entry (res ("L entry")), exit (res ("L exit")), m.transition ("K"_S, eq ("-13"), res ("action"), res ("another")),
-                 m.transition ("M"_S, eq ("13"), res ("action"), res ("another")));
+        m.state ("L"_ST, entry (res ("L entry")), exit (res ("L exit")), m.transition ("K"_ST, eq ("-13"), res ("action"), res ("another")),
+                 m.transition ("M"_ST, eq ("13"), res ("action"), res ("another")));
 
-        m.state ("M"_S, entry (res ("M entry")), exit (res ("M exit")), m.transition ("L"_S, eq ("-14"), res ("action"), res ("another")),
-                 m.transition ("N"_S, eq ("14"), res ("action"), res ("another")));
+        m.state ("M"_ST, entry (res ("M entry")), exit (res ("M exit")), m.transition ("L"_ST, eq ("-14"), res ("action"), res ("another")),
+                 m.transition ("N"_ST, eq ("14"), res ("action"), res ("another")));
 
-        m.state ("N"_S, entry (res ("N entry")), exit (res ("N exit")), m.transition ("M"_S, eq ("-15"), res ("action"), res ("another")),
-                 m.transition ("O"_S, eq ("15"), res ("action"), res ("another")));
+        m.state ("N"_ST, entry (res ("N entry")), exit (res ("N exit")), m.transition ("M"_ST, eq ("-15"), res ("action"), res ("another")),
+                 m.transition ("O"_ST, eq ("15"), res ("action"), res ("another")));
 
-        m.state ("O"_S, entry (res ("O entry")), exit (res ("O exit")), m.transition ("N"_S, eq ("-16"), res ("action"), res ("another")),
-                 m.transition ("FINAL"_S, eq ("16"), res ("action"), res ("another")));
+        m.state ("O"_ST, entry (res ("O entry")), exit (res ("O exit")), m.transition ("N"_ST, eq ("-16"), res ("action"), res ("another")),
+                 m.transition ("FINAL"_ST, eq ("16"), res ("action"), res ("another")));
 
-        m.state ("FINAL"_S, entry (res ("FINAL entry")));
+        m.state ("FINAL"_ST, entry (res ("FINAL entry")));
 
         etl::deque<std::string, 16> evq;
         m.run (evq); // _->INIT

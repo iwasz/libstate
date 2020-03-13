@@ -48,37 +48,37 @@ TEST_CASE ("First test", "[Instantiation]")
 
         auto m = machine (
                 // TODO Full, many actions!
-                // state ("INIT"_S, entry (At ("A"), At ("bla")), exit (At ("A"), At ("bla")),
+                // state ("INIT"_ST, entry (At ("A"), At ("bla")), exit (At ("A"), At ("bla")),
                 //        transition (
-                //                "B"_S, [] (int i) { return i == 2; }, At ("bla"), At ("bla"))),
+                //                "B"_ST, [] (int i) { return i == 2; }, At ("bla"), At ("bla"))),
 
                 // Full single actions
-                state ("INIT"_S, entry (At ("bla")), exit (At ("bla")),
+                state ("INIT"_ST, entry (At ("bla")), exit (At ("bla")),
                        transition (
-                               "B"_S, [] (int i) { return i == 2; }, At ("bla"))),
+                               "B"_ST, [] (int i) { return i == 2; }, At ("bla"))),
 
                 // Transition without actions
-                state ("B"_S, entry (At ("Z")), exit (At ("A")), transition ("C"_S, [] (int i) { return i == 3; })),
+                state ("B"_ST, entry (At ("Z")), exit (At ("A")), transition ("C"_ST, [] (int i) { return i == 3; })),
 
                 // State without transitions
-                state ("C"_S, entry (At ("Z")), exit (At ("A"))), // TODO this should not compile!
+                state ("C"_ST, entry (At ("Z")), exit (At ("A"))), // TODO this should not compile!
 
-                state ("D"_S, entry (At ("Z")),
+                state ("D"_ST, entry (At ("Z")),
                        transition (
-                               ""_S, [] (int ev) { return false; }, At (""))), // TODO this should not compile!
+                               ""_ST, [] (int ev) { return false; }, At (""))), // TODO this should not compile!
 
                 /// No transition, no exit actions
-                // state ("C"_S, entry (At ("Z"))),
+                // state ("C"_ST, entry (At ("Z"))),
 
                 // TODO Transition without actions and without condition (always true)
-                // state ("C"_S, entry (At ("Z")), exit (At ("DT")), transition ("D"_S)),
+                // state ("C"_ST, entry (At ("Z")), exit (At ("DT")), transition ("D"_ST)),
 
                 // TODO Transition WITH actions but without condition (always true)
-                // state ("D"_S, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_S), At ("Z")),
+                // state ("D"_ST, entry (At ("Z")), exit (At ("DT")), transition ("FINAL"_ST), At ("Z")),
 
-                state ("FINAL"_S, entry (At ("Z")), exit (At ("DT")),
+                state ("FINAL"_ST, entry (At ("Z")), exit (At ("DT")),
                        transition (
-                               ""_S, [] (int ev) { return false; }, At ("")))
+                               ""_ST, [] (int ev) { return false; }, At ("")))
 
         );
 
@@ -90,45 +90,45 @@ TEST_CASE ("First test", "[Instantiation]")
  */
 TEST_CASE ("Machine instance", "[Instantiation]")
 {
-        auto m = machine (state ("INIT"_S, entry ([] (int event) { std::cout << "1st entry [" << event << "]" << std::endl; }),
+        auto m = machine (state ("INIT"_ST, entry ([] (int event) { std::cout << "1st entry [" << event << "]" << std::endl; }),
                                  exit ([] (int) { std::cout << "1st exit" << std::endl; }),
                                  transition (
-                                         "B"_S, [] (int i) { return i == 2; }, At ("bla"))),
+                                         "B"_ST, [] (int i) { return i == 2; }, At ("bla"))),
 
-                          state ("B"_S, entry (At ("Z")), exit ([] (int) { std::cout << "exit in the middle" << std::endl; }),
+                          state ("B"_ST, entry (At ("Z")), exit ([] (int) { std::cout << "exit in the middle" << std::endl; }),
                                  transition (
-                                         "C"_S, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
+                                         "C"_ST, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
 
-                          state ("C"_S, entry ([] {}), exit ([] (auto) {}),
+                          state ("C"_ST, entry ([] {}), exit ([] (auto) {}),
                                  transition (
-                                         "B"_S, [] (int ev) { return ev == 5; }, At ("")),
+                                         "B"_ST, [] (int ev) { return ev == 5; }, At ("")),
                                  transition (
-                                         "FINAL"_S, [] (int ev) { return ev == 4; }, At ("Ble"))),
+                                         "FINAL"_ST, [] (int ev) { return ev == 4; }, At ("Ble"))),
 
-                          state ("FINAL"_S, entry ([] () {}, [] () {}), exit ([] (auto) {}, [] (auto) {}))
+                          state ("FINAL"_ST, entry ([] () {}, [] () {}), exit ([] (auto) {}, [] (auto) {}))
 
         );
 
         /*
          * We run the machine for the first time with two events in the queue. Both
-         * events will be checked by the conditions. Because the transition of "INIT"_S
+         * events will be checked by the conditions. Because the transition of "INIT"_ST
          * fires upon event '2', the state is changed.
          */
         m.run (0);
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
 
         m.run (2);
-        REQUIRE (m.getCurrentStateIndex () == "B"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 
         m.run (3);
-        REQUIRE (m.getCurrentStateIndex () == "C"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
 
         m.run (5);
-        REQUIRE (m.getCurrentStateIndex () == "B"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 
         m.run (3);
-        REQUIRE (m.getCurrentStateIndex () == "C"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
 
         m.run (4);
-        REQUIRE (m.getCurrentStateIndex () == "FINAL"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "FINAL"_ST.getIndex ());
 }

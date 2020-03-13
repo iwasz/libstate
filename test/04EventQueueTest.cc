@@ -25,26 +25,26 @@ using Event = std::vector<std::string>;
  */
 TEST_CASE ("Instance", "[Event queue]")
 {
-        auto m = machine (state ("INIT"_S, entry (At ("INIT entry")), exit (At ("INIT exit")),
+        auto m = machine (state ("INIT"_ST, entry (At ("INIT entry")), exit (At ("INIT exit")),
                                  transition (
-                                         "B"_S, [] (auto const &e) { return e.size () == 1; }, At ("transition to B"))),
+                                         "B"_ST, [] (auto const &e) { return e.size () == 1; }, At ("transition to B"))),
 
-                          state ("B"_S, entry (At ("B entry")), exit (At ("B exit")),
+                          state ("B"_ST, entry (At ("B entry")), exit (At ("B exit")),
                                  transition (
-                                         "INIT"_S, [] (auto const & /* e */) { return false; }, At ("A"), At ("B")))
+                                         "INIT"_ST, [] (auto const & /* e */) { return false; }, At ("A"), At ("B")))
 
         );
 
         /*
          * We run the machine for the first time with two events in the queue. Both
-         * events will be checked by the conditions. Because the transition of "INIT"_S
+         * events will be checked by the conditions. Because the transition of "INIT"_ST
          * fires upon event '2', the state is changed.
          */
         m.run (Event{});
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
 
         m.run (Event{"Ala"});
-        REQUIRE (m.getCurrentStateIndex () == "B"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 }
 
 /**
@@ -102,71 +102,71 @@ TEST_CASE ("Condition", "[Event queue]")
         };
 
         auto m = machine (
-                state ("INIT"_S, entry (At ("INIT entry")), exit (At ("INIT exit")), transition ("B"_S, size (1), At ("transition to B"))),
+                state ("INIT"_ST, entry (At ("INIT entry")), exit (At ("INIT exit")), transition ("B"_ST, size (1), At ("transition to B"))),
 
-                state ("B"_S, entry (At ("B entry")), exit (At ("B exit")), transition ("C"_S, has ("Janka"), At ("transition to C"))),
+                state ("B"_ST, entry (At ("B entry")), exit (At ("B exit")), transition ("C"_ST, has ("Janka"), At ("transition to C"))),
 
-                state ("C"_S, entry (At ("C entry")), exit (At ("C exit")),
-                       transition ("D"_S, all ("psa", "ma", "Ala"), At ("transition to D"))),
+                state ("C"_ST, entry (At ("C entry")), exit (At ("C exit")),
+                       transition ("D"_ST, all ("psa", "ma", "Ala"), At ("transition to D"))),
 
-                state ("D"_S, entry (At ("D entry")), exit (At ("D exit")),
-                       transition ("E"_S, any ("kalosz", "parasol", "płaszcz"), At ("transition to E"))),
+                state ("D"_ST, entry (At ("D entry")), exit (At ("D exit")),
+                       transition ("E"_ST, any ("kalosz", "parasol", "płaszcz"), At ("transition to E"))),
 
-                state ("E"_S, entry (At ("E entry")), exit (At ("E exit")),
-                       transition ("F"_S, strict ("kot", "ma", "psa"), At ("transition to F"))),
+                state ("E"_ST, entry (At ("E entry")), exit (At ("E exit")),
+                       transition ("F"_ST, strict ("kot", "ma", "psa"), At ("transition to F"))),
 
-                state ("F"_S, entry (At ("F entry")), exit (At ("F exit")),
-                       transition ("G"_S, seq ("idzie", "Grześ", "wieś"), At ("transition to G"))),
+                state ("F"_ST, entry (At ("F entry")), exit (At ("F exit")),
+                       transition ("G"_ST, seq ("idzie", "Grześ", "wieś"), At ("transition to G"))),
 
-                state ("G"_S, entry (At ("G entry")), exit (At ("G exit")),
+                state ("G"_ST, entry (At ("G entry")), exit (At ("G exit")),
                        transition (
-                               "Z"_S, [] (auto /* a */) { return false; }, At ("transition to Z")))
+                               "Z"_ST, [] (auto /* a */) { return false; }, At ("transition to Z")))
 
         );
 
         /*
          * We run the machine for the first time with two events in the queue. Both
-         * events will be checked by the conditions. Because the transition of "INIT"_S
+         * events will be checked by the conditions. Because the transition of "INIT"_ST
          * fires upon event '2', the state is changed.
          */
         m.run (Event{});
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
 
         m.run (Event{"Ala"});
-        REQUIRE (m.getCurrentStateIndex () == "B"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 
         m.run (Event{"Ala", "kocha", "Janka"});
-        REQUIRE (m.getCurrentStateIndex () == "C"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
 
         m.run (Event{"Ala", "ma", "kota", "i", "psa"});
-        REQUIRE (m.getCurrentStateIndex () == "D"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "D"_ST.getIndex ());
 
         m.run (Event{"Ala", "ma", "parasol", "i", "psa"});
-        REQUIRE (m.getCurrentStateIndex () == "E"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "E"_ST.getIndex ());
 
         /*--------------------------------------------------------------------------*/
         // E -> F
         // Negative check
         m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"});
         // We stay in E
-        REQUIRE (m.getCurrentStateIndex () == "E"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "E"_ST.getIndex ());
 
         // Negative check 2
         m.run (Event{"Stary", "kot", "ma", "parasol", "i", "psa"});
-        REQUIRE (m.getCurrentStateIndex () == "E"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "E"_ST.getIndex ());
 
         m.run (Event{"Stary", "kot", "ma", "psa", "i", "parasol"});
-        REQUIRE (m.getCurrentStateIndex () == "F"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "F"_ST.getIndex ());
 
         /*--------------------------------------------------------------------------*/
         // F -> G
         // Negative
         m.run (Event{"Grześ", "Idzie", "aaa", "przez", "wieś", "worek"});
-        REQUIRE (m.getCurrentStateIndex () == "F"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "F"_ST.getIndex ());
 
         // Positive
         m.run (Event{"idzie", "aaa", "Grześ", "przez", "wieś", "worek"});
-        REQUIRE (m.getCurrentStateIndex () == "G"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "G"_ST.getIndex ());
 }
 
 namespace op {
@@ -206,51 +206,51 @@ TEST_CASE ("AndOr", "[Event queue]")
                 return [val] (auto const &events) { return std::find (events.cbegin (), events.cend (), val) != events.cend (); };
         };
 
-        auto m = machine (state ("INIT"_S, entry (At ("INIT entry")), exit (At ("INIT exit")),
-                                 transition ("B"_S, size (1) && has ("Janek"), At ("transition to B"))),
+        auto m = machine (state ("INIT"_ST, entry (At ("INIT entry")), exit (At ("INIT exit")),
+                                 transition ("B"_ST, size (1) && has ("Janek"), At ("transition to B"))),
 
-                          state ("B"_S, entry (At ("B entry")), exit (At ("B exit")),
-                                 transition ("C"_S, size (3) && has ("Ala") && has ("kota"), At ("transition to C"))),
+                          state ("B"_ST, entry (At ("B entry")), exit (At ("B exit")),
+                                 transition ("C"_ST, size (3) && has ("Ala") && has ("kota"), At ("transition to C"))),
 
-                          state ("C"_S, entry (At ("C entry")), exit (At ("C exit")),
-                                 transition ("D"_S, size (4) || has ("Janek"), At ("transition to C")))
+                          state ("C"_ST, entry (At ("C entry")), exit (At ("C exit")),
+                                 transition ("D"_ST, size (4) || has ("Janek"), At ("transition to C")))
 
         );
 
         /*
          * We run the machine for the first time with two events in the queue. Both
-         * events will be checked by the conditions. Because the transition of "INIT"_S
+         * events will be checked by the conditions. Because the transition of "INIT"_ST
          * fires upon event '2', the state is changed.
          */
         m.run (Event{});
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
 
         /*--------------------------------------------------------------------------*/
 
         // Negative
         m.run (Event{"Ala"});
-        REQUIRE (m.getCurrentStateIndex () != "B"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () != "B"_ST.getIndex ());
         // Positive test
         m.run (Event{"Janek"});
-        REQUIRE (m.getCurrentStateIndex () == "B"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 
         /*--------------------------------------------------------------------------*/
 
         // Negative
         m.run (Event{"Ala", "ma", "pas"});
-        REQUIRE (m.getCurrentStateIndex () != "C"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () != "C"_ST.getIndex ());
         // Negative
         m.run (Event{"Ala", "ma", "kota", "psa"});
-        REQUIRE (m.getCurrentStateIndex () != "C"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () != "C"_ST.getIndex ());
         // Positive test
         m.run (Event{"Ala", "ma", "kota"});
-        REQUIRE (m.getCurrentStateIndex () == "C"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
 
         /*--------------------------------------------------------------------------*/
 
         // Positive test
         m.run (Event{"Aaa", "Bbb", "Ccc", "ddd"});
-        REQUIRE (m.getCurrentStateIndex () == "D"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "D"_ST.getIndex ());
 }
 
 template <typename OutputIterator, typename Parm, typename... Rst>
@@ -258,10 +258,14 @@ void doStore (OutputIterator const &begin, OutputIterator const &end, int paramN
 {
         if (paramNumber == currentParamNumber) {
                 if constexpr (std::is_same_v<Parm, int>) {
-                        std::array<char, std::numeric_limits<int>::digits + 2> tmp{};
-                        auto it = std::copy (begin, end, tmp.begin ());
-                        *it = '\0';
-                        param = atoi (tmp.data ());
+                        std::array<char, 16> tmp{};
+                        auto dist = std::distance (begin, end);
+
+                        if (dist > 0 && dist < int (tmp.size ())) {
+                                auto it = std::copy (begin, end, tmp.begin ());
+                                *it = '\0';
+                                param = atoi (tmp.data ());
+                        }
                 }
                 else {
                         param.clear ();
@@ -280,7 +284,7 @@ enum class StripInput { DONT_STRIP, STRIP };
  * Like condition (like in SQL), but without '_'. Only '%' works.
  */
 template <typename EventT, typename... Parm>
-bool like (EventT const &event, gsl::czstring<> conditionStr, StripInput stripInput = StripInput::STRIP, Parm &... params)
+bool like (EventT const &event, gsl::czstring<> conditionStr, StripInput stripInput /* = StripInput::STRIP */, Parm &... params)
 {
         std::string_view condition{conditionStr};
 
@@ -372,38 +376,38 @@ bool like (EventT const &event, gsl::czstring<> conditionStr, StripInput stripIn
 TEST_CASE ("LikeFunction", "[Event queue]")
 {
         using namespace std::string_literals;
-        REQUIRE (like ("Ala"s, "%la"));
-        REQUIRE (like (" Ala"s, "%la"));
-        REQUIRE (like ("\r\nAla"s, "Ala"));
-        REQUIRE (like (" Ala"s, "Ala"));
-        REQUIRE (like (" Ala "s, "Ala"));
-        REQUIRE (like (" Ala \r\n"s, "Ala"));
-        REQUIRE (like (" Ala \r\n"s, "A%a"));
+        REQUIRE (like ("Ala"s, "%la", StripInput::STRIP));
+        REQUIRE (like (" Ala"s, "%la", StripInput::STRIP));
+        REQUIRE (like ("\r\nAla"s, "Ala", StripInput::STRIP));
+        REQUIRE (like (" Ala"s, "Ala", StripInput::STRIP));
+        REQUIRE (like (" Ala "s, "Ala", StripInput::STRIP));
+        REQUIRE (like (" Ala \r\n"s, "Ala", StripInput::STRIP));
+        REQUIRE (like (" Ala \r\n"s, "A%a", StripInput::STRIP));
 
-        REQUIRE (like (">41 0C 00 40 "s, "%41 0C%"));
-        REQUIRE (like ("\r>41 0C 00 40 "s, "%41 0C%"));
-        REQUIRE (like ("\r\n>41 0C 00 40 "s, "%41 0C%"));
-        REQUIRE (like (">41 0C 00 40\r"s, "%41 0C%"));
-        REQUIRE (like (">41 0C 00 40\r\n"s, "%41 0C%"));
-        REQUIRE (like ("\r\n>41 0C 00 40\r\n"s, "%41 0C%"));
-        REQUIRE (like ("41 0C 00 40 "s, "%41 0C%"));
-        REQUIRE (like ("\r41 0C 00 40 "s, "%41 0C%"));
-        REQUIRE (like ("\r\n41 0C 00 40 "s, "%41 0C%"));
-        REQUIRE (like ("41 0C 00 40\r"s, "%41 0C%"));
-        REQUIRE (like ("41 0C 00 40\r\n"s, "%41 0C%"));
-        REQUIRE (like ("\r\n41 0C 00 40\r\n"s, "%41 0C%"));
-        REQUIRE (like (">41 0C 00 00 "s, "%41 0C%"));
-        REQUIRE (like ("\r>41 0C 00 00 "s, "%41 0C%"));
-        REQUIRE (like ("\r\n>41 0C 00 00 "s, "%41 0C%"));
-        REQUIRE (like (">41 0C 00 00\r"s, "%41 0C%"));
-        REQUIRE (like (">41 0C 00 00\r\n"s, "%41 0C%"));
-        REQUIRE (like ("\r\n>41 0C 00 00\r\n"s, "%41 0C%"));
-        REQUIRE (like ("41 0C 00 00 "s, "%41 0C%"));
-        REQUIRE (like ("\r41 0C 00 00 "s, "%41 0C%"));
-        REQUIRE (like ("\r\n41 0C 00 00 "s, "%41 0C%"));
-        REQUIRE (like ("41 0C 00 00\r"s, "%41 0C%"));
-        REQUIRE (like ("41 0C 00 00\r\n"s, "%41 0C%"));
-        REQUIRE (like ("\r\n41 0C 00 00\r\n"s, "%41 0C%"));
+        REQUIRE (like (">41 0C 00 40 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r>41 0C 00 40 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r\n>41 0C 00 40 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like (">41 0C 00 40\r"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like (">41 0C 00 40\r\n"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r\n>41 0C 00 40\r\n"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("41 0C 00 40 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r41 0C 00 40 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r\n41 0C 00 40 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("41 0C 00 40\r"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("41 0C 00 40\r\n"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r\n41 0C 00 40\r\n"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like (">41 0C 00 00 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r>41 0C 00 00 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r\n>41 0C 00 00 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like (">41 0C 00 00\r"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like (">41 0C 00 00\r\n"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r\n>41 0C 00 00\r\n"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("41 0C 00 00 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r41 0C 00 00 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r\n41 0C 00 00 "s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("41 0C 00 00\r"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("41 0C 00 00\r\n"s, "%41 0C%", StripInput::STRIP));
+        REQUIRE (like ("\r\n41 0C 00 00\r\n"s, "%41 0C%", StripInput::STRIP));
 
         REQUIRE (like ("+CREG: 1,0"s, "+CREG: %,0%", StripInput::DONT_STRIP));
         REQUIRE (like ("+CREG: 0,0"s, "+CREG: %,0%", StripInput::DONT_STRIP));
@@ -475,6 +479,15 @@ TEST_CASE ("Like parsing", "[Event queue]")
         REQUIRE (a == 321);
         REQUIRE (b == 456);
         REQUIRE (c == 555);
+
+        REQUIRE (like ("+QIRD: 216.58.207.46:80,TCP,1500"s, "+QIRD:%,TCP,%", StripInput::STRIP, a, b));
+        // REQUIRE (a == 0);
+        REQUIRE (b == 1500);
+
+        REQUIRE (!like ("AT+QISACK\r\n"s, "+QISACK:%,%,%", StripInput::STRIP, a, b, c));
+        REQUIRE (!like ("+QISACK*\r\n"s, "+QISACK:%,%,%", StripInput::STRIP, a, b, c));
+        // REQUIRE (a == 0);
+        // REQUIRE (b == 1500);
 }
 
 /**
@@ -495,7 +508,8 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         /// Checks if event collection contains this particular value.
         auto has = [] (const char *val) {
                 return [val] (auto const &events) {
-                        return std::find_if (events.cbegin (), events.cend (), [val] (auto const &event) { return like (event, val); })
+                        return std::find_if (events.cbegin (), events.cend (),
+                                             [val] (auto const &event) { return like (event, val, StripInput::STRIP); })
                                 != events.cend ();
                 };
         };
@@ -503,7 +517,8 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         // Returns true if all values are present in the event colection, no matter the order
         auto all = [] (auto const &... val) {
                 return [val...] (auto const &events) {
-                        return ((std::find_if (events.cbegin (), events.cend (), [val] (auto const &event) { return like (event, val); })
+                        return ((std::find_if (events.cbegin (), events.cend (),
+                                               [val] (auto const &event) { return like (event, val, StripInput::STRIP); })
                                  != events.cend ())
                                 && ...);
                 };
@@ -512,7 +527,8 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         // Returns true if one of the values is present in the event collection.
         auto any = [] (auto const &... val) {
                 return [val...] (auto const &events) {
-                        return ((std::find_if (events.cbegin (), events.cend (), [val] (auto const &event) { return like (event, val); })
+                        return ((std::find_if (events.cbegin (), events.cend (),
+                                               [val] (auto const &event) { return like (event, val, StripInput::STRIP); })
                                  != events.cend ())
                                 || ...);
                 };
@@ -525,7 +541,7 @@ TEST_CASE ("LikeCondition", "[Event queue]")
                         size_t currentArg{};
 
                         for (auto const &ev : events) {
-                                if (like (ev, args.at (currentArg))) {
+                                if (like (ev, args.at (currentArg), StripInput::STRIP)) {
                                         if (++currentArg == args.size ()) {
                                                 return true;
                                         }
@@ -537,76 +553,78 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         };
 
         auto m = machine (
-                state ("INIT"_S, entry (At ("INIT entry")), transition ("B"_S, size (1), At ("transition to B"))),
+                state ("INIT"_ST, entry (At ("INIT entry")), transition ("B"_ST, size (1), At ("transition to B"))),
 
-                state ("B"_S, entry (At ("B entry")), exit (At ("B exit")), transition ("C"_S, has ("%och%"), At ("transition to C"))),
+                state ("B"_ST, entry (At ("B entry")), exit (At ("B exit")), transition ("C"_ST, has ("%och%"), At ("transition to C"))),
 
-                state ("C"_S, entry (At ("C entry")), exit (At ("C exit")),
-                       transition ("D"_S, all ("%sa", "ma", "A%a"), At ("transition to D"))),
+                state ("C"_ST, entry (At ("C entry")), exit (At ("C exit")),
+                       transition ("D"_ST, all ("%sa", "ma", "A%a"), At ("transition to D"))),
 
-                state ("D"_S, entry (At ("D entry")), exit (At ("D exit")),
-                       transition ("E"_S, any ("ka%sz", "parasol", "p%cz"), At ("transition to E"))),
+                state ("D"_ST, entry (At ("D entry")), exit (At ("D exit")),
+                       transition ("E"_ST, any ("ka%sz", "parasol", "p%cz"), At ("transition to E"))),
 
-                state ("E"_S, entry (At ("E entry")), exit (At ("E exit")), transition ("F"_S, seq ("k%", "ma", "psa"), At ("transition to F"))),
+                state ("E"_ST, entry (At ("E entry")), exit (At ("E exit")),
+                       transition ("F"_ST, seq ("k%", "ma", "psa"), At ("transition to F"))),
 
-                state ("F"_S, entry (At ("F entry")), exit (At ("F exit")), transition ("G"_S, seq ("kot", "ma", "p%"), At ("transition to G"))),
+                state ("F"_ST, entry (At ("F entry")), exit (At ("F exit")),
+                       transition ("G"_ST, seq ("kot", "ma", "p%"), At ("transition to G"))),
 
-                state ("G"_S, entry (At ("G entry")), exit (At ("G exit")),
+                state ("G"_ST, entry (At ("G entry")), exit (At ("G exit")),
                        transition (
-                               "Z"_S, [] (auto /* a */) { return false; }, At ("transition to Z"))),
+                               "Z"_ST, [] (auto /* a */) { return false; }, At ("transition to Z"))),
 
-                state ("Z"_S, entry (At ("Z entry")), exit (At ("Z exit")),
+                state ("Z"_ST, entry (At ("Z entry")), exit (At ("Z exit")),
                        transition (
-                               "INIT"_S, [] (auto const & /* e */) { return false; }, At ("transition to INIT"))));
+                               "INIT"_ST, [] (auto const & /* e */) { return false; }, At ("transition to INIT"))));
 
         using namespace std::string_literals;
 
         /*
          * We run the machine for the first time with two events in the queue. Both
-         * events will be checked by the conditions. Because the transition of "INIT"_S
+         * events will be checked by the conditions. Because the transition of "INIT"_ST
          * fires upon event '2', the state is changed.
          */
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
         REQUIRE (std::string{m.getCurrentStateName ()} == "INIT"s);
 
         // Fires entry actions, does not transition anywhere, because conditions are not satified
         m.run (Event{});
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
         REQUIRE (m.getCurrentStateName () == "INIT"s);
 
         m.run (Event{"Ala"});
-        REQUIRE (m.getCurrentStateIndex () == "B"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
         REQUIRE (m.getCurrentStateName () == "B"s);
 
         m.run (Event{"Ala", "kocha", "Janka"});
-        REQUIRE (m.getCurrentStateIndex () == "C"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
 
         m.run (Event{"Ala", "ma", "kota", "i", "psa"});
-        REQUIRE (m.getCurrentStateIndex () == "D"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "D"_ST.getIndex ());
 
         m.run (Event{"Ala", "ma", "parasol", "i", "psa"});
-        REQUIRE (m.getCurrentStateIndex () == "E"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "E"_ST.getIndex ());
 
         /*--------------------------------------------------------------------------*/
         // E -> F
         // Negative check
         m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"});
         // We stay in E
-        REQUIRE (m.getCurrentStateIndex () == "E"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "E"_ST.getIndex ());
 
         m.run (Event{"Stary", "kot", "ma", "psa", "i", "parasol"});
-        REQUIRE (m.getCurrentStateIndex () == "F"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "F"_ST.getIndex ());
 
         /*--------------------------------------------------------------------------*/
         // F -> G
         // Negative
         REQUIRE (!m.run (Event{"Stary", "psa", "ma", "parasol", "i", "kot"}));
-        REQUIRE (m.getCurrentStateIndex () == "F"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "F"_ST.getIndex ());
 
         REQUIRE (!m.run (Event{"kot"}));
-        REQUIRE (m.getCurrentStateIndex () == "F"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "F"_ST.getIndex ());
 
         // Positive
         m.run (Event{"Stary", "kot", "ma", "parasol", "i", "psa"});
-        REQUIRE (m.getCurrentStateIndex () == "G"_S.getIndex ());
+        REQUIRE (m.getCurrentStateIndex () == "G"_ST.getIndex ());
 }
