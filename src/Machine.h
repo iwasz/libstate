@@ -220,12 +220,12 @@ template <typename Sn, typename EntT> auto state (Sn /* stateName */, EntryActio
 
 // TODO this is not implemented. Rethink.
 struct Instrumentation {
-        template <typename... Args> static void log (Args &&... args) {}
+        void onStateChange (gsl::czstring<> currentStateName, unsigned int currentStateIndex) {}
 };
 
 template <typename StaT, typename Ins> class Machine {
 public:
-        Machine (StaT states /* , Ins ins */) : states{std::move (states)} /* , instrumentation{std::move (ins)} */ {}
+        Machine (StaT states, Ins ins) : states{std::move (states)}, instrumentation{std::move (ins)} {}
 
         /// returns whether the state was changed
         template <typename Ev> bool run (Ev const &ev);
@@ -239,19 +239,23 @@ public:
         gsl::czstring<> getCurrentStateName () const { return currentStateName; }
 
         StaT states;
-        // Ins instrumentation;
 
 private:
         bool entryRun{};
         unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
         gsl::czstring<> currentStateName{std::tuple_element<0, StaT>::type::Name::c_str ()};
+        Ins instrumentation;
 };
 
-template <typename... Sta, typename Ins = Instrumentation> constexpr auto machine (Sta &&... states /* , Ins &&ins = {} */)
+template <typename... Sta, typename Ins = Instrumentation> constexpr auto machine (Sta &&... states)
 {
-        // return Machine<decltype (std::make_tuple (states...)), Ins> (std::make_tuple (states...));
-        // return Machine (std::make_tuple (std::forward<Sta> (states)...), std::forward<Ins> (ins));
-        return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), Ins> (std::make_tuple (std::forward<Sta> (states)...));
+        return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), Ins> (std::make_tuple (std::forward<Sta> (states)...), {});
+}
+
+template <typename... Sta, typename Ins> constexpr auto machinei (Ins &&instrumentation, Sta &&... states)
+{
+        return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), std::remove_reference_t<Ins>> (
+                std::make_tuple (std::forward<Sta> (states)...), std::forward<Ins> (instrumentation));
 }
 
 namespace detail {
@@ -322,7 +326,7 @@ template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT,
                                         transition.runTransitionActions (ev);
                                         machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
                                         machine->currentStateName = std::remove_reference_t<decltype (transition)>::Name::c_str ();
-                                        // Ins::log ("State :", machine->currentStateName);
+                                        machine->instrumentation.onStateChange (machine->currentStateName, machine->currentStateIndex);
                                         stateChangedAtLeastOnce = stateChanged = true;
                                         machine->entryRun = false;
                                 });
