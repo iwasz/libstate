@@ -552,6 +552,43 @@ TEST_CASE ("LikeCondition", "[Event queue]")
                 };
         };
 
+        auto consecutive = [] (auto const &... val) {
+                return [val...] (auto const &events) {
+                        std::array args{val...};
+                        size_t currentArg{};
+
+                        for (auto const &ev : events) {
+                                if (like (ev, args.at (currentArg), StripInput::STRIP)) {
+                                        if (++currentArg == args.size ()) {
+                                                return true;
+                                        }
+                                }
+                                else {
+                                        currentArg = 0;
+                                }
+                        }
+
+                        return false;
+                };
+        };
+
+        REQUIRE (seq ("A", "B", "C") (Event{"A", "B", "C"}));
+        REQUIRE (seq ("A", "B", "C") (Event{"X", "A", "B", "C"}));
+        REQUIRE (seq ("A", "B", "C") (Event{"A", "B", "C", "X"}));
+        REQUIRE (seq ("A", "B", "C") (Event{"A", "X", "B", "X", "C"}));
+        REQUIRE (seq ("A", "B", "C") (Event{"X", "A", "X", "B", "X", "C", "X"}));
+        REQUIRE (!seq ("A", "B", "C") (Event{"A", "C", "B"}));
+        REQUIRE (seq ("A", "B", "C") (Event{"A", "A", "C", "B", "C"}));
+
+        REQUIRE (consecutive ("A", "B", "C") (Event{"A", "B", "C"}));
+        REQUIRE (consecutive ("A", "B", "C") (Event{"X", "A", "B", "C"}));
+        REQUIRE (consecutive ("A", "B", "C") (Event{"A", "B", "C", "X"}));
+        REQUIRE (!consecutive ("A", "B", "C") (Event{"A", "B", "X", "C"}));
+        REQUIRE (!consecutive ("A", "B", "C") (Event{"A", "X", "B", "X", "C"}));
+        REQUIRE (consecutive ("A", "B", "C") (Event{"X", "A", "B", "C", "X"}));
+        REQUIRE (!consecutive ("A", "B", "C") (Event{"A", "C", "B"}));
+        REQUIRE (consecutive ("A", "B", "C") (Event{"A", "B", "x", "A", "B", "C"}));
+
         auto m = machine (
                 state ("INIT"_ST, entry (At ("INIT entry")), transition ("B"_ST, size (1), At ("transition to B"))),
 
