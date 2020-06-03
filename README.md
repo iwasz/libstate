@@ -2,6 +2,36 @@
 * Initial state is the state whih was first added (convention).
 * Action callback interface options : can return Done or void, can take an Event argument or void.
 
+# A quick example
+``` cpp
+auto m = machine (state ("INIT"_ST, entry ([] (int event) { std::cout << "1st entry [" << event << "]" << std::endl; }),
+                                exit ([] (int) { std::cout << "1st exit" << std::endl; }),
+                                transition (
+                                        "B"_ST, [] (int i) { return i == 2; }, At ("bla"))),
+
+                        state ("B"_ST, entry (At ("Z")), exit ([] (int) { std::cout << "exit in the middle" << std::endl; }),
+                                transition (
+                                        "C"_ST, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
+
+                        state ("C"_ST, entry ([] {}), exit ([] (auto) {}),
+                                transition (
+                                        "B"_ST, [] (int ev) { return ev == 5; }, At ("")),
+                                transition (
+                                        "FINAL"_ST, [] (int ev) { return ev == 4; }, At ("Ble"))),
+
+                        state ("FINAL"_ST, entry ([] () {}, [] () {}), exit ([] (auto) {}, [] (auto) {}))
+
+);
+
+m.run (0);
+REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
+
+m.run (2);
+REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+
+/// ...
+```
+
 # Milestones
 1. Static, typesafe API.
 1. Changing states.
