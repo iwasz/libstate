@@ -6,7 +6,6 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "Action.h"
 #include "Machine.h"
 #include "Utils.h"
 #include "catch.hpp"

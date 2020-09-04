@@ -152,6 +152,10 @@ template <typename Act> struct EntryActions {
         Act act;
 };
 
+template <> struct EntryActions<int> {
+        static constexpr int act = 0;
+};
+
 template <typename... Acts> constexpr auto entry (Acts &&... act) { return EntryActions{std::make_tuple (act...)}; }
 template <typename Act> constexpr auto entry (Act &&act) { return EntryActions{std::forward<Act> (act)}; }
 
@@ -159,6 +163,10 @@ template <typename Act> struct ExitActions {
         ExitActions (Act a) : act{std::move (a)} {}
         // std::tuple or a single callable
         Act act;
+};
+
+template <> struct ExitActions<int> {
+        static constexpr int act = 0;
 };
 
 template <typename... Act> constexpr auto exit (Act &&... act) { return ExitActions{std::make_tuple (act...)}; }
@@ -179,20 +187,21 @@ template <typename Sn, typename EntT, typename... Snn, typename... Con, typename
 auto state (Sn /* stateName */, EntryActions<EntT> &&en, Transition<Snn, Con, TacT> &&... tra)
 {
         return State<Sn, EntryActions<EntT>, decltype (std::make_tuple (tra...)), ExitActions<int>> (
-                std::forward<EntryActions<EntT>> (en), std::make_tuple (tra...), ExitActions<int>{0});
+                std::forward<EntryActions<EntT>> (en), std::make_tuple (tra...), ExitActions<int>{});
 }
 
 template <typename Sn, typename ExiT, typename... Snn, typename... Con, typename... TacT>
 auto state (Sn /* stateName */, ExitActions<ExiT> &&ex, Transition<Snn, Con, TacT> &&... tra)
 {
         return State<Sn, EntryActions<int>, decltype (std::make_tuple (tra...)), ExitActions<ExiT>> (
-                EntryActions<int>{0}, std::make_tuple (tra...), std::forward<ExitActions<ExiT>> (ex));
+                EntryActions<int>{}, std::make_tuple (tra...), std::forward<ExitActions<ExiT>> (ex));
 }
 
+/// 0
 template <typename Sn, typename... Snn, typename... Con, typename... TacT> auto state (Sn /* stateName */, Transition<Snn, Con, TacT> &&... tra)
 {
         return State<Sn, EntryActions<int>, decltype (std::make_tuple (tra...)), ExitActions<int>> (
-                EntryActions<int>{0}, std::make_tuple (tra...), ExitActions<int>{0});
+                EntryActions<int>{}, std::make_tuple (tra...), ExitActions<int>{});
 }
 
 /****************************************************************************/
