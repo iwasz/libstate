@@ -35,16 +35,16 @@ REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 # Milestones
 1. Static, typesafe API.
 1. Changing states.
-1. Running actions in correct order (partially)
+1. Running actions in the correct order (partially)
 1. Retained input.
 
 # TODOs
-* [ ] Return neneric std::duration instead aof a std::chrono::nanoseconds
+* [ ] Return generic std::duration instead aof a std::chrono::nanoseconds
 * [ ] There should be an error when adding exit to entry like that : ```entry ([] {}, exit ([] {}))```. This is obviously a mistake.
 * [ ] When wrappers are sorted out, pay attention to function / method / lambda argument types (&, &&, universal && etc).
 * [ ] state function should accept parameters in different order (more logical order) : exit, then  transitions, then exit. This is because
   exit action is only needed IF and only if there is at least one transition, but trnsitions can exist WITHOUT an exit action.
-* [ ] Compilation problem when last action has a transition.
+* [x] Compilation problem when last action has a transition.
 * [ ] All sorts of combinations should be possible when creating a state. With/without either of : entry, exit, transition. Transition 
 should be with or without either of : condition, action (s).
 * [ ] Make state with no actions possible.
@@ -296,7 +296,7 @@ I also found it difficult to get track of all the measurements which I made afte
 ## Second attempt
 Implementation 2 used type Erasure which made runtime polymorphic interface for state and transition and thus made storing a pointer (to a base class) to them possible. This made it significantly faster but executable size is even bigger than before (presumably because of new templates ErasedState and ErasedTransition).
 
-## Third attept
+## Third attempt
 Mix of 3 approaches from above. Most notably states are created on prealocated memowry block using placement new (as the most meory hungry objects which hold everything). 
 
 ## To try

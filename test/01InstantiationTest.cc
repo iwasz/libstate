@@ -132,3 +132,4 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         m.run (4);
         REQUIRE (m.getCurrentStateIndex () == "FINAL"_ST.getIndex ());
 }
+

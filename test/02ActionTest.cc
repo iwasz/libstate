@@ -25,6 +25,30 @@ struct Instrumentation {
         template <typename... Args> static void log (Args &&... args) {}
 };
 
+TEST_CASE ("Action instantiation", "[Action]")
+{
+        auto res = [] (std::string const & /* message */) { return [] (auto /* a */) {}; };
+        auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
+
+        machine (state ("INIT"_ST, entry ([] () {}), exit ([] {}), transition ("B"_ST, eq (2), res ("aa"))), // 3
+
+                 state ("INIT"_ST, exit ([] {}), transition ("B"_ST, eq (2), res ("aa"))),     // 2
+                 state ("INIT"_ST, entry ([] () {}), transition ("B"_ST, eq (2), res ("aa"))), // 2
+                 state ("INIT"_ST, entry ([] () {}), exit ([] {})),                            // 2
+
+                 state ("INIT"_ST, entry ([] () {})),                        // 1
+                 state ("INIT"_ST, exit ([] {})),                            // 1
+                 state ("INIT"_ST, transition ("B"_ST, eq (2), res ("aa"))), // 1
+
+                 state ("INIT"_ST), // 0
+
+                 state ("TRA"_ST, transition ("B"_ST, eq (2), res ("aa"))), // 2
+                 state ("TRA"_ST, transition ("B"_ST, eq (2)))              // 2
+                                                                            //  state ("TRA"_ST, transition ("B"_ST))                      // 2
+
+        );
+}
+
 /**
  * Machine instance and a few features tested.
  */
@@ -189,3 +213,8 @@ TEST_CASE ("Instrumentation", "[Action]")
         REQUIRE (results.at (22) == "FINAL entry");
         REQUIRE (results.size () == 23);
 }
+
+/**
+ * Basic concepts.
+ */
+TEST_CASE ("Basic concepts", "[Action]") {}

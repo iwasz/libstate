@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 PROJECT (libstate)
 SET (CMAKE_VERBOSE_MAKEFILE OFF)
 
-SET(CMAKE_CXX_FLAGS "-std=c++17 -Wall -fdata-sections -ffunction-sections -fno-unwind-tables" CACHE INTERNAL "cxx compiler flags")
+SET(CMAKE_CXX_FLAGS "-std=c++20 -Wall -fdata-sections -ffunction-sections -fno-unwind-tables" CACHE INTERNAL "cxx compiler flags")
 #SET(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer -std=c++17 -Wall -fdata-sections -ffunction-sections -fno-unwind-tables" CACHE INTERNAL "cxx compiler flags")
 # SET(CMAKE_CXX_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fPIE -fno-omit-frame-pointer -std=c++17 -Wall -fdata-sections -ffunction-sections -fno-unwind-tables" CACHE INTERNAL "cxx compiler flags")
 
@@ -35,15 +35,7 @@ ADD_EXECUTABLE (unittest
     "test/04EventQueueTest.cc"
 )
 
-ADD_EXECUTABLE (benchmarktest
-    "src/StateMachine.h"
-    "src/Action.h"
-    "src/Misc.h"
-    "test/benchmark.cc"
-)
-
 ADD_EXECUTABLE (tupleTest
     "test/tupleTest.cc"
 )
 
-target_compile_definitions(benchmarktest PRIVATE NDEBUG=1)

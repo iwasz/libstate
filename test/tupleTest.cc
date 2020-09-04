@@ -78,7 +78,7 @@ int main ()
                 state ("N"_ST, entry (cmd ("O entry")), exit (cmd ("O exit")), transition ("M"_ST, eq ("-16"), res ("action"), res ("another")),
                        transition ("FINAL"_ST, eq ("16"), res ("action"), res ("another"))),
 
-                state ("FINAL"_ST, entry (cmd ("FINAL entry")), exit (cmd ("")), transition ("FINAL"_ST, eq ("-17")))
+                state ("FINAL"_ST, entry (cmd ("FINAL entry")))
 #endif
         );
 

@@ -8,8 +8,11 @@
 
 #pragma once
 #include <array>
+#include <boost/callable_traits.hpp>
+#include <concepts>
 #include <gsl/gsl>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace ls {
@@ -68,7 +71,7 @@ template <char... s> struct Name2 {
 
 template <char... s> constexpr Name2<s...> Name2_c{};
 
-// TODO This is a GNU extension. Provide macro as an option.
+// In C++ prior to 20 this is a GNU extension.
 template <typename C, C... c> constexpr auto operator""_ST () { return Name2_c<c...>; }
 
 /****************************************************************************/
@@ -141,29 +144,7 @@ template <typename Act> inline void runActions (Act &action) { action (); }
 
 template <typename Act> void runSomeActions (Act &actions) { runActions (actions); }
 
-// template <typename Sn, typename EntT, typename TraT, typename ExiT>
-// template <typename Ev>
-// void State<Sn, EntT, TraT, ExiT>::runExit (Ev const &ev)
-// {
-//         runActions (ev, exitActions);
-// }
-
-// template <typename Sn, typename EntT, typename TraT, typename ExiT> auto state (EntT &&en, TraT &&tra, ExiT &&ex)
-// {
-//         return State<Sn, EntT, TraT, ExiT> (std::forward<EntT> (en), std::forward<TraT> (tra), std::forward<ExiT> (ex));
-// }
-
-// template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state (EntT &&en, ExiT &&ex, Tra &&... tra)
-// {
-//         return State<Sn, EntT, decltype (std::make_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::make_tuple (tra...),
-//                                                                            std::forward<ExiT> (ex));
-// }
-
-// template <typename Sn, typename EntT, typename... Tra, typename ExiT> auto state (Sn, EntT &&en, ExiT &&ex, Tra &&... tra)
-// {
-//         return State<Sn, EntT, decltype (std::make_tuple (tra...)), ExiT> (std::forward<EntT> (en), std::make_tuple (tra...),
-//                                                                            std::forward<ExiT> (ex));
-// }
+/****************************************************************************/
 
 template <typename Act> struct EntryActions {
         EntryActions (Act a) : act{std::move (a)} {}
@@ -183,6 +164,9 @@ template <typename Act> struct ExitActions {
 template <typename... Act> constexpr auto exit (Act &&... act) { return ExitActions{std::make_tuple (act...)}; }
 template <typename Act> constexpr auto exit (Act &&act) { return ExitActions{std::forward<Act> (act)}; }
 
+/****************************************************************************/
+
+/// 3
 template <typename Sn, typename EntT, typename ExiT, typename... Snn, typename... Con, typename... TacT>
 auto state (Sn /* stateName */, EntryActions<EntT> &&en, ExitActions<ExiT> &&ex, Transition<Snn, Con, TacT> &&... tra)
 {
@@ -190,6 +174,7 @@ auto state (Sn /* stateName */, EntryActions<EntT> &&en, ExitActions<ExiT> &&ex,
                 std::forward<EntryActions<EntT>> (en), std::make_tuple (tra...), std::forward<ExitActions<ExiT>> (ex));
 }
 
+/// 2
 template <typename Sn, typename EntT, typename... Snn, typename... Con, typename... TacT>
 auto state (Sn /* stateName */, EntryActions<EntT> &&en, Transition<Snn, Con, TacT> &&... tra)
 {
@@ -197,23 +182,17 @@ auto state (Sn /* stateName */, EntryActions<EntT> &&en, Transition<Snn, Con, Ta
                 std::forward<EntryActions<EntT>> (en), std::make_tuple (tra...), ExitActions<int>{0});
 }
 
-// template <typename Sn, typename EntT, typename ExiT, typename... Snn, typename... Con, typename... TacT>
-// auto state (Sn /* stateName */, EntryActions<EntT> &&en, Transition<Snn, Con, TacT> &&... tra, ExitActions<ExiT> &&ex)
-// {
-//         return State<Sn, EntryActions<EntT>, decltype (std::make_tuple (tra...)), ExitActions<ExiT>> (
-//                 std::forward<EntryActions<EntT>> (en), std::make_tuple (tra...), std::forward<ExitActions<ExiT>> (ex));
-// }
-
-// template <typename Sn, typename EntT, typename ExiT> auto state (Sn /* stateName */, EntryActions<EntT> &&en, ExitActions<ExiT> &&ex)
-// {
-//         return State<Sn, EntryActions<EntT>, decltype (std::make_tuple ()), ExitActions<ExiT>> (
-//                 std::forward<EntryActions<EntT>> (en), std::make_tuple (), std::forward<ExitActions<ExiT>> (ex));
-// }
-
-template <typename Sn, typename EntT> auto state (Sn /* stateName */, EntryActions<EntT> &&en)
+template <typename Sn, typename ExiT, typename... Snn, typename... Con, typename... TacT>
+auto state (Sn /* stateName */, ExitActions<ExiT> &&ex, Transition<Snn, Con, TacT> &&... tra)
 {
-        return State<Sn, EntryActions<EntT>, decltype (std::make_tuple ()), ExitActions<int>> (std::forward<EntryActions<EntT>> (en),
-                                                                                               std::make_tuple (), ExitActions<int>{0});
+        return State<Sn, EntryActions<int>, decltype (std::make_tuple (tra...)), ExitActions<ExiT>> (
+                EntryActions<int>{0}, std::make_tuple (tra...), std::forward<ExitActions<ExiT>> (ex));
+}
+
+template <typename Sn, typename... Snn, typename... Con, typename... TacT> auto state (Sn /* stateName */, Transition<Snn, Con, TacT> &&... tra)
+{
+        return State<Sn, EntryActions<int>, decltype (std::make_tuple (tra...)), ExitActions<int>> (
+                EntryActions<int>{0}, std::make_tuple (tra...), ExitActions<int>{0});
 }
 
 /****************************************************************************/
