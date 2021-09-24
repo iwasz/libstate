@@ -66,17 +66,17 @@ TEST_CASE ("Condition", "[Event queue]")
         };
 
         // Returns true if all values are present in the event colection, no matter the order
-        auto all = [] (auto const &... val) {
+        auto all = [] (auto const &...val) {
                 return [val...] (auto const &events) { return ((std::find (events.cbegin (), events.cend (), val) != events.cend ()) && ...); };
         };
 
         // Returns true if one of the values is present in the event collection.
-        auto any = [] (auto const &... val) {
+        auto any = [] (auto const &...val) {
                 return [val...] (auto const &events) { return ((std::find (events.cbegin (), events.cend (), val) != events.cend ()) || ...); };
         };
 
         // Returns true if all values are present in the event colection one after another (without any values in between).
-        auto strict = [] (auto const &... val) {
+        auto strict = [] (auto const &...val) {
                 return [val...] (auto const &events) {
                         std::array a{val...};
                         return (std::search (events.cbegin (), events.cend (), a.cbegin (), a.cend ()) != events.cend ());
@@ -84,7 +84,7 @@ TEST_CASE ("Condition", "[Event queue]")
         };
 
         // Returns true if all values are present in the event colection one after another (with possible values in between).
-        auto seq = [] (auto const &... val) {
+        auto seq = [] (auto const &...val) {
                 return [val...] (auto const &events) {
                         std::array args{val...};
                         size_t currentArg{};
@@ -254,7 +254,7 @@ TEST_CASE ("AndOr", "[Event queue]")
 }
 
 template <typename OutputIterator, typename Parm, typename... Rst>
-void doStore (OutputIterator const &begin, OutputIterator const &end, int paramNumber, int currentParamNumber, Parm &param, Rst &... rest)
+void doStore (OutputIterator const &begin, OutputIterator const &end, int paramNumber, int currentParamNumber, Parm &param, Rst &...rest)
 {
         if (paramNumber == currentParamNumber) {
                 if constexpr (std::is_same_v<Parm, int>) {
@@ -284,7 +284,7 @@ enum class StripInput { DONT_STRIP, STRIP };
  * Like condition (like in SQL), but without '_'. Only '%' works.
  */
 template <typename EventT, typename... Parm>
-bool like (EventT const &event, gsl::czstring<> conditionStr, StripInput stripInput /* = StripInput::STRIP */, Parm &... params)
+bool like (EventT const &event, gsl::czstring conditionStr, StripInput stripInput /* = StripInput::STRIP */, Parm &...params)
 {
         std::string_view condition{conditionStr};
 
@@ -515,7 +515,7 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         };
 
         // Returns true if all values are present in the event colection, no matter the order
-        auto all = [] (auto const &... val) {
+        auto all = [] (auto const &...val) {
                 return [val...] (auto const &events) {
                         return ((std::find_if (events.cbegin (), events.cend (),
                                                [val] (auto const &event) { return like (event, val, StripInput::STRIP); })
@@ -525,7 +525,7 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         };
 
         // Returns true if one of the values is present in the event collection.
-        auto any = [] (auto const &... val) {
+        auto any = [] (auto const &...val) {
                 return [val...] (auto const &events) {
                         return ((std::find_if (events.cbegin (), events.cend (),
                                                [val] (auto const &event) { return like (event, val, StripInput::STRIP); })
@@ -535,7 +535,7 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         };
 
         // Returns true if all values are present in the event colection one after another (with possible values in between).
-        auto seq = [] (auto const &... val) {
+        auto seq = [] (auto const &...val) {
                 return [val...] (auto const &events) {
                         std::array args{val...};
                         size_t currentArg{};
@@ -552,7 +552,7 @@ TEST_CASE ("LikeCondition", "[Event queue]")
                 };
         };
 
-        auto consecutive = [] (auto const &... val) {
+        auto consecutive = [] (auto const &...val) {
                 return [val...] (auto const &events) {
                         std::array args{val...};
                         size_t currentArg{};

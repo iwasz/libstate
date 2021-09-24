@@ -60,7 +60,7 @@ template <char... Chars> using Crc32 = Crc32Impl<0xFFFFFFFF, Chars...>;
 
 template <char... s> struct Name2 {
 
-        constexpr static gsl::czstring<> c_str () { return name.data (); }
+        constexpr static gsl::czstring c_str () { return name.data (); }
         constexpr static std::array<char, sizeof...(s) + 1> name{s..., '\0'};
 
         static constexpr unsigned int getIndex () { return Crc32<s...>::value; }
@@ -89,10 +89,10 @@ template <typename Sn, typename Con, typename TacT> struct Transition {
 
 template <typename Sn, typename Con, typename TacT> template <typename Ev> void Transition<Sn, Con, TacT>::runTransitionActions (Ev const &ev)
 {
-        std::apply ([&ev] (auto &... transitionAction) { (transitionAction (ev), ...); }, transitionActions);
+        std::apply ([&ev] (auto &...transitionAction) { (transitionAction (ev), ...); }, transitionActions);
 }
 
-template <typename Sn, typename Con, typename... Tac> auto transition (Sn, Con &&condition, Tac &&... actions)
+template <typename Sn, typename Con, typename... Tac> auto transition (Sn, Con &&condition, Tac &&...actions)
 {
         return Transition<Sn, Con, decltype (std::make_tuple (actions...))> (std::forward<Con> (condition), std::make_tuple (actions...));
 }
@@ -125,7 +125,7 @@ template <typename Ev, typename Act> inline void runActions (Ev const &ev, Act &
 /// For a tuple of callables
 template <typename Ev, typename... Acts> inline void runActions (Ev const &ev, std::tuple<Acts...> &actions)
 {
-        std::apply ([&ev] (auto &... action) { (runActions (ev, action), ...); }, actions);
+        std::apply ([&ev] (auto &...action) { (runActions (ev, action), ...); }, actions);
 }
 
 template <typename Ev, typename Act> void runSomeActions (Ev const &ev, Act &actions) { runActions (ev, actions); }
@@ -134,7 +134,7 @@ template <typename Ev, typename Act> void runSomeActions (Ev const &ev, Act &act
 
 template <typename... Acts> inline void runActions (std::tuple<Acts...> &actions)
 {
-        std::apply ([] (auto &... action) { (action (), ...); }, actions);
+        std::apply ([] (auto &...action) { (action (), ...); }, actions);
 }
 
 template <typename Act> inline void runActions (Act &action) { action (); }
@@ -171,7 +171,7 @@ template <typename Act> struct EntryActions {
         Act act;
 };
 
-template <typename... Acts> constexpr auto entry (Acts &&... act) { return EntryActions{std::make_tuple (act...)}; }
+template <typename... Acts> constexpr auto entry (Acts &&...act) { return EntryActions{std::make_tuple (act...)}; }
 template <typename Act> constexpr auto entry (Act &&act) { return EntryActions{std::forward<Act> (act)}; }
 
 template <typename Act> struct ExitActions {
@@ -180,18 +180,18 @@ template <typename Act> struct ExitActions {
         Act act;
 };
 
-template <typename... Act> constexpr auto exit (Act &&... act) { return ExitActions{std::make_tuple (act...)}; }
+template <typename... Act> constexpr auto exit (Act &&...act) { return ExitActions{std::make_tuple (act...)}; }
 template <typename Act> constexpr auto exit (Act &&act) { return ExitActions{std::forward<Act> (act)}; }
 
 template <typename Sn, typename EntT, typename ExiT, typename... Snn, typename... Con, typename... TacT>
-auto state (Sn /* stateName */, EntryActions<EntT> &&en, ExitActions<ExiT> &&ex, Transition<Snn, Con, TacT> &&... tra)
+auto state (Sn /* stateName */, EntryActions<EntT> &&en, ExitActions<ExiT> &&ex, Transition<Snn, Con, TacT> &&...tra)
 {
         return State<Sn, EntryActions<EntT>, decltype (std::make_tuple (tra...)), ExitActions<ExiT>> (
                 std::forward<EntryActions<EntT>> (en), std::make_tuple (tra...), std::forward<ExitActions<ExiT>> (ex));
 }
 
 template <typename Sn, typename EntT, typename... Snn, typename... Con, typename... TacT>
-auto state (Sn /* stateName */, EntryActions<EntT> &&en, Transition<Snn, Con, TacT> &&... tra)
+auto state (Sn /* stateName */, EntryActions<EntT> &&en, Transition<Snn, Con, TacT> &&...tra)
 {
         return State<Sn, EntryActions<EntT>, decltype (std::make_tuple (tra...)), ExitActions<int>> (
                 std::forward<EntryActions<EntT>> (en), std::make_tuple (tra...), ExitActions<int>{0});
@@ -220,7 +220,7 @@ template <typename Sn, typename EntT> auto state (Sn /* stateName */, EntryActio
 
 // TODO this is not implemented. Rethink.
 struct Instrumentation {
-        void onStateChange (gsl::czstring<> currentStateName, unsigned int currentStateIndex) {}
+        void onStateChange (gsl::czstring currentStateName, unsigned int currentStateIndex) {}
 };
 
 template <typename StaT, typename Ins> class Machine {
@@ -236,31 +236,30 @@ public:
         /// States are distinguished at runtime by unique IDS.
         auto getCurrentStateIndex () const { return currentStateIndex; }
         /// For debugging purposes
-        gsl::czstring<> getCurrentStateName () const { return currentStateName; }
+        gsl::czstring getCurrentStateName () const { return currentStateName; }
 
         StaT states;
 
 private:
         bool entryRun{};
         unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
-        gsl::czstring<> currentStateName{std::tuple_element<0, StaT>::type::Name::c_str ()};
+        gsl::czstring currentStateName{std::tuple_element<0, StaT>::type::Name::c_str ()};
         Ins instrumentation;
 };
 
-template <typename... Sta, typename Ins = Instrumentation> constexpr auto machine (Sta &&... states)
+template <typename... Sta, typename Ins = Instrumentation> constexpr auto machine (Sta &&...states)
 {
         return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), Ins> (std::make_tuple (std::forward<Sta> (states)...), {});
 }
 
-template <typename... Sta, typename Ins> constexpr auto machinei (Ins &&instrumentation, Sta &&... states)
+template <typename... Sta, typename Ins> constexpr auto machinei (Ins &&instrumentation, Sta &&...states)
 {
         return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), std::remove_reference_t<Ins>> (
                 std::make_tuple (std::forward<Sta> (states)...), std::forward<Ins> (instrumentation));
 }
 
 namespace detail {
-        template <typename Fun, typename Sta, typename... Rst>
-        void runIfCurrentState (unsigned int current, Fun &&fun, Sta &state, Rst &... rest)
+        template <typename Fun, typename Sta, typename... Rst> void runIfCurrentState (unsigned int current, Fun &&fun, Sta &state, Rst &...rest)
         {
                 if (Sta::Name::getIndex () == current) {
                         fun (state);
@@ -277,13 +276,13 @@ namespace detail {
 template <typename StaT, typename Ins> template <typename Fun> void Machine<StaT, Ins>::forCurrentState (Fun &&function)
 {
         std::apply (
-                [&function, this] (auto &... state) { detail::runIfCurrentState (currentStateIndex, std::forward<Fun> (function), state...); },
+                [&function, this] (auto &...state) { detail::runIfCurrentState (currentStateIndex, std::forward<Fun> (function), state...); },
                 states);
 }
 
 namespace detail {
         template <typename Fun, typename Ev, typename Tra, typename... Rst>
-        void runIfMatchingTransition (Fun &&fun, Ev const &ev, Tra &transition, Rst &... rest)
+        void runIfMatchingTransition (Fun &&fun, Ev const &ev, Tra &transition, Rst &...rest)
         {
                 if (transition.condition (ev)) {
                         fun (transition);
@@ -301,7 +300,7 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
         // If there are any transitions at all
         if constexpr (std::tuple_size<TraT>::value > 0) {
                 std::apply ([&ev, &function] (
-                                    auto &... transition) { detail::runIfMatchingTransition (std::forward<Fun> (function), ev, transition...); },
+                                    auto &...transition) { detail::runIfMatchingTransition (std::forward<Fun> (function), ev, transition...); },
                             transitions);
         }
 }

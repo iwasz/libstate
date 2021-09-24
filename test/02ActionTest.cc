@@ -22,7 +22,7 @@ using namespace std::chrono_literals;
 using namespace ls;
 
 struct Instrumentation {
-        template <typename... Args> static void log (Args &&... args) {}
+        template <typename... Args> static void log (Args &&...args) {}
 };
 
 /**
@@ -112,7 +112,7 @@ TEST_CASE ("Instrumentation", "[Action]")
 
         struct Instr {
                 Instr (std::vector<std::string> &r) : results (r) {}
-                void onStateChange (gsl::czstring<> currentStateName, unsigned int /* currentStateIndex */)
+                void onStateChange (gsl::czstring currentStateName, unsigned int /* currentStateIndex */)
                 {
                         results.emplace_back (currentStateName);
                 }
