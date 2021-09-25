@@ -1,6 +1,7 @@
 # To be documented
 * Initial state is the state whih was first added (convention).
 * Action callback interface options : can return Done or void, can take an Event argument or void.
+* Stack overflow when -O0 and ```#pragma GCC optimize``, and __attribute__((optimize__(xxx)))
 
 # A quick example
 ``` cpp
@@ -256,7 +257,7 @@ Most size increase came from too **many nested iterations** over std::tuples. At
     * For every state - find current state and run its exit actrions (16)
     * For every state - find the state we are transitioning to and run its entry actions (16)
 
-This was naiive implementation and it had 16 * 2 * 16 * 16 = 1024 if branches that had to be generated. 
+This was naiive implementation and it had 16 * 2 * 16 * 16 = 8192 if branches that had to be generated. 
 
 After reducing the nesting to only 2 levels (16*2) size dropped drastically (to the levels more than satifactory, but event type was set to int so comparison was not conclusive).
 
