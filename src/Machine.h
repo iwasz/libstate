@@ -1,13 +1,17 @@
 /****************************************************************************
  *                                                                          *
  *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
- *  ~~~~~~~~                                                                *
+ *  ~~~~~~~~
+
+ // TODO add license file
+
  *  License : see COPYING file for details.                                 *
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
 #pragma once
 #include <array>
+// TODO remove this dependency.
 #include <gsl/gsl>
 #include <tuple>
 #include <utility>
@@ -77,6 +81,7 @@ template <typename Sn, typename Con, typename TacT> struct Transition {
 
         using Name = Sn;
 
+        // TODO value semantics.
         Transition (Con condition, TacT transitionActions) : condition{std::move (condition)}, transitionActions{std::move (transitionActions)}
         {
         }
