@@ -98,7 +98,8 @@ template <typename Sn, typename Con, typename TacT> template <typename Ev> void 
 
 template <typename Sn, typename Con, typename... Tac> auto transition (Sn, Con &&condition, Tac &&...actions)
 {
-        return Transition<Sn, Con, decltype (std::make_tuple (actions...))> (std::forward<Con> (condition), std::make_tuple (actions...));
+        return Transition<Sn, std::decay_t<Con>, decltype (std::make_tuple (actions...))> (std::forward<Con> (condition),
+                                                                                           std::make_tuple (actions...));
 }
 
 /****************************************************************************/
