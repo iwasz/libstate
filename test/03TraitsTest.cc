@@ -7,9 +7,9 @@
  ****************************************************************************/
 
 #include "Machine.h"
-#include "catch.hpp"
 #include <boost/callable_traits/has_void_return.hpp>
 #include <boost/callable_traits/return_type.hpp>
+#include <catch2/catch.hpp>
 #include <type_traits>
 #include <utility>
 
@@ -29,11 +29,11 @@ struct S {
 template <typename T> inline constexpr bool returns_bool_v = std::is_same_v<boost::callable_traits::return_type_t<T>, bool>;
 
 template <typename T, typename... A, typename = std::enable_if_t<returns_bool_v<T> && (boost::callable_traits::has_void_return_v<A> && ...)>>
-void transition (T &&t, A &&... a)
+void transition (T &&t, A &&...a)
 {
 }
 
-template <typename... A, typename = std::enable_if_t<(boost::callable_traits::has_void_return_v<A> && ...)>> void transition (A &&... a) {}
+template <typename... A, typename = std::enable_if_t<(boost::callable_traits::has_void_return_v<A> && ...)>> void transition (A &&...a) {}
 
 // struct S {
 //         double operator() (char, int &);

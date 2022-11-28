@@ -6,10 +6,9 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "Action.h"
 #include "Machine.h"
 #include "Utils.h"
-#include "catch.hpp"
+#include <catch2/catch.hpp>
 #include <chrono>
 #include <cstring>
 #include <deque>
@@ -112,7 +111,7 @@ TEST_CASE ("Instrumentation", "[Action]")
 
         struct Instr {
                 Instr (std::vector<std::string> &r) : results (r) {}
-                void onStateChange (gsl::czstring currentStateName, unsigned int /* currentStateIndex */)
+                void onStateChange (const char *currentStateName, unsigned int /* currentStateIndex */)
                 {
                         results.emplace_back (currentStateName);
                 }

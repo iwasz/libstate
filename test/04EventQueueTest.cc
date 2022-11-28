@@ -8,8 +8,8 @@
 
 #include "Machine.h"
 #include "Utils.h"
-#include "catch.hpp"
 #include <array>
+#include <catch2/catch.hpp>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -180,7 +180,7 @@ template <typename ConA, typename ConB> auto operator|| (ConA conditionA, ConB c
         return [cA = std::move (conditionA), cB = std::move (conditionB)] (auto const &events) { return cA (events) || cB (events); };
 }
 
-template <typename ConA> auto operator! (ConA conditionA)
+template <typename ConA> auto operator!(ConA conditionA)
 {
         return [cA = std::move (conditionA)] (auto const &events) { return !(cA (events)); };
 }
@@ -284,7 +284,7 @@ enum class StripInput { DONT_STRIP, STRIP };
  * Like condition (like in SQL), but without '_'. Only '%' works.
  */
 template <typename EventT, typename... Parm>
-bool like (EventT const &event, gsl::czstring conditionStr, StripInput stripInput /* = StripInput::STRIP */, Parm &...params)
+bool like (EventT const &event, const char *conditionStr, StripInput stripInput /* = StripInput::STRIP */, Parm &...params)
 {
         std::string_view condition{conditionStr};
 
@@ -517,20 +517,26 @@ TEST_CASE ("LikeCondition", "[Event queue]")
         // Returns true if all values are present in the event colection, no matter the order
         auto all = [] (auto const &...val) {
                 return [val...] (auto const &events) {
-                        return ((std::find_if (events.cbegin (), events.cend (),
-                                               [val] (auto const &event) { return like (event, val, StripInput::STRIP); })
-                                 != events.cend ())
-                                && ...);
+                        auto find = [&events] (auto const &a) {
+                                return std::find_if (events.cbegin (), events.cend (),
+                                                     [&a] (auto const &event) { return like (event, a, StripInput::STRIP); })
+                                        != events.cend ();
+                        };
+
+                        return (find (val) && ...);
                 };
         };
 
         // Returns true if one of the values is present in the event collection.
         auto any = [] (auto const &...val) {
                 return [val...] (auto const &events) {
-                        return ((std::find_if (events.cbegin (), events.cend (),
-                                               [val] (auto const &event) { return like (event, val, StripInput::STRIP); })
-                                 != events.cend ())
-                                || ...);
+                        auto find = [&events] (auto const &a) {
+                                return std::find_if (events.cbegin (), events.cend (),
+                                                     [&a] (auto const &event) { return like (event, a, StripInput::STRIP); })
+                                        != events.cend ();
+                        };
+
+                        return (find (val) || ...);
                 };
         };
 

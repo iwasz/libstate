@@ -6,7 +6,7 @@
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
 
-#include "StateMachine.h"
+#include "Machine.h"
 #include <etl/deque.h>
 
 int main ()
@@ -18,7 +18,7 @@ int main ()
         auto res = [&results] (std::string const &message) { return [&results, message] { results.push_back (message); }; };
         auto eq = [] (std::string const &what) { return [what] (auto const &i) { return i == what; }; };
 
-        Machine2<std::string, HeapAllocator, 32> m;
+        Machine<std::string, HeapAllocator, 32> m;
 
         m.state ("INIT"_ST, entry (res ("INIT entry")), exit (res ("INIT exit")), m.transition ("B"_ST, eq ("2"), res ("action")));
 

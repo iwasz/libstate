@@ -11,8 +11,6 @@
 
 #pragma once
 #include <array>
-// TODO remove this dependency.
-#include <gsl/gsl-lite.hpp>
 #include <tuple>
 #include <utility>
 
@@ -63,7 +61,7 @@ template <char... Chars> using Crc32 = Crc32Impl<0xFFFFFFFF, Chars...>;
 
 template <char... s> struct Name2 {
 
-        constexpr static gsl::czstring c_str () { return name.data (); }
+        constexpr static const char *c_str () { return name.data (); }
         constexpr static std::array<char, sizeof...(s) + 1> name{s..., '\0'};
 
         static constexpr unsigned int getIndex () { return Crc32<s...>::value; }
@@ -225,7 +223,7 @@ template <typename Sn, typename EntT> auto state (Sn /* stateName */, EntryActio
 
 // TODO this is not implemented. Rethink.
 struct Instrumentation {
-        void onStateChange (gsl::czstring currentStateName, unsigned int currentStateIndex) {}
+        void onStateChange (const char *currentStateName, unsigned int currentStateIndex) {}
 };
 
 template <typename StaT, typename Ins> class Machine {
@@ -241,14 +239,14 @@ public:
         /// States are distinguished at runtime by unique IDS.
         auto getCurrentStateIndex () const { return currentStateIndex; }
         /// For debugging purposes
-        gsl::czstring getCurrentStateName () const { return currentStateName; }
+        const char *getCurrentStateName () const { return currentStateName; }
 
         StaT states;
 
 private:
         bool entryRun{};
         unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
-        gsl::czstring currentStateName{std::tuple_element<0, StaT>::type::Name::c_str ()};
+        const char *currentStateName{std::tuple_element<0, StaT>::type::Name::c_str ()};
         Ins instrumentation;
 };
 
