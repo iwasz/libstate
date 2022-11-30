@@ -317,8 +317,8 @@ template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT,
 
                 forCurrentState ([&ev, &stateChanged, &stateChangedAtLeastOnce, machine = this] (auto &state) {
                         if (!machine->entryRun) {
-                                runActions (ev, state.entryActions.act);
                                 machine->entryRun = true;
+                                runActions (ev, state.entryActions.act);
                                 return;
                         }
 
@@ -330,7 +330,8 @@ template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT,
                                         machine->currentStateName = std::remove_reference_t<decltype (transition)>::Name::c_str ();
                                         machine->instrumentation.onStateChange (machine->currentStateName, machine->currentStateIndex);
                                         stateChangedAtLeastOnce = stateChanged = true;
-                                        machine->entryRun = false;
+                                        machine->entryRun = false; // TODO what should happen in case of an exception thworwn from exit or
+                                                                   // transition action?
                                 });
                 });
 
