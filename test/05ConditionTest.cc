@@ -123,3 +123,70 @@ TEST_CASE ("Operators and references", "[Condition]")
                 CHECK (myTrueB.cnt == 1);
         }
 }
+
+TEST_CASE ("Global transitions", "[Condition]")
+{
+        auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
+
+        // auto aaa = global (transition ("error"_ST, eq (666)), transition ("fatalError"_ST, eq (777)));
+
+        auto m = machine (global (transition ("error"_ST, eq (666)),       //
+                                  transition ("fatalError"_ST, eq (777))), //
+                          state ("A"_ST, transition ("B"_ST, eq (1))),     //
+                          state ("B"_ST, transition ("A"_ST, eq (2))),     //
+                          state ("error"_ST),                              //
+                          state ("fatalError"_ST));
+
+        SECTION ("error")
+        {
+
+                CHECK_NOTHROW (m.run (0));
+                CHECK (m.getCurrentStateIndex () == "A"_ST.getIndex ());
+
+                CHECK_NOTHROW (m.run (1));
+                CHECK (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+
+                CHECK_NOTHROW (m.run (666));
+                CHECK (m.getCurrentStateIndex () == "error"_ST.getIndex ());
+        }
+
+        SECTION ("fatalError")
+        {
+
+                CHECK_NOTHROW (m.run (0));
+                CHECK (m.getCurrentStateIndex () == "A"_ST.getIndex ());
+
+                CHECK_NOTHROW (m.run (1));
+                CHECK (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+
+                CHECK_NOTHROW (m.run (777));
+                CHECK (m.getCurrentStateIndex () == "fatalError"_ST.getIndex ());
+        }
+}
+
+TEST_CASE ("Global transitions with intrumentation", "[Condition]")
+{
+        auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
+
+        struct Instr {
+                void onEntry (const char *currentStateName, unsigned int /* currentStateIndex */) {}
+                void onExit (const char *currentStateName, unsigned int /* currentStateIndex */, int acceptedTransNumber) {}
+        };
+
+        auto m = machine (Instr{},
+                          global (transition ("error"_ST, eq (666)),       //
+                                  transition ("fatalError"_ST, eq (777))), //
+                          state ("A"_ST, transition ("B"_ST, eq (1))),     //
+                          state ("B"_ST, transition ("A"_ST, eq (2))),     //
+                          state ("error"_ST),                              //
+                          state ("fatalError"_ST));
+
+        CHECK_NOTHROW (m.run (0));
+        CHECK (m.getCurrentStateIndex () == "A"_ST.getIndex ());
+
+        CHECK_NOTHROW (m.run (1));
+        CHECK (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+
+        CHECK_NOTHROW (m.run (666));
+        CHECK (m.getCurrentStateIndex () == "error"_ST.getIndex ());
+}

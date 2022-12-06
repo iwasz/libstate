@@ -220,15 +220,34 @@ template <typename Sn, typename EntT> auto state (Sn /* stateName */, EntryActio
 
 /****************************************************************************/
 
+struct EmptyGlobal {
+        std::tuple<> transitions{};
+};
+
+template <typename TraT> struct Global {
+        explicit Global (TraT tr) : transitions{std::move (tr)} {}
+        TraT transitions;
+};
+
+template <typename... Snn, typename... Con, typename... TacT> auto global (Transition<Snn, Con, TacT> &&...tra)
+{
+        return Global (std::make_tuple (std::forward<Transition<Snn, Con, TacT>> (tra)...));
+}
+
+template <typename T> struct is_global : public std::bool_constant<false> {};
+template <typename TraT> struct is_global<Global<TraT>> : public std::bool_constant<true> {};
+
+/****************************************************************************/
+
 //  this is not implemented. Rethink.
 struct Instrumentation {
         // void onEntry (const char *currentStateName, unsigned int currentStateIndex) {}
         // void onExit (const char *currentStateName, unsigned int currentStateIndex, int acceptedTransNumber) {}
 };
 
-template <typename StaT, typename Ins> class Machine {
+template <typename StaT, typename Ins, typename Glob = EmptyGlobal> class Machine {
 public:
-        Machine (StaT states, Ins const &ins) : states{std::move (states)}, instrumentation{ins} {}
+        Machine (StaT states, Ins const &ins, Glob const &glob = {}) : states{std::move (states)}, instrumentation{ins}, global{glob} {}
 
         /// returns whether the state was changed
         template <typename Ev> bool run (Ev const &ev);
@@ -248,6 +267,7 @@ private:
         unsigned int currentStateIndex{std::tuple_element<0, StaT>::type::Name::getIndex ()};
         const char *currentStateName{std::tuple_element<0, StaT>::type::Name::c_str ()};
         Ins instrumentation;
+        Glob global;
 };
 
 template <typename... Sta, typename Ins = Instrumentation>
@@ -257,12 +277,28 @@ constexpr auto machine (Sta &&...states)
         return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), Ins> (std::make_tuple (std::forward<Sta> (states)...), {});
 }
 
+template <typename... Sta, typename Ins = Instrumentation, typename Glob>
+        requires std::conjunction_v<is_state<Sta>...> && is_global<Glob>::value
+constexpr auto machine (Glob &&glob, Sta &&...states)
+{
+        return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), Ins, std::unwrap_ref_decay_t<Glob>> (
+                std::make_tuple (std::forward<Sta> (states)...), {}, std::forward<Glob> (glob));
+}
+
 template <typename... Sta, typename Ins>
-        requires (!is_state<Ins>::value) && std::conjunction_v<is_state<Sta>...>
+        requires (!is_state<Ins>::value) && (!is_global<Ins>::value) && std::conjunction_v<is_state<Sta>...>
 constexpr auto machine (Ins &&instrumentation, Sta &&...states)
 {
         return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), std::unwrap_ref_decay_t<Ins>> (
                 std::make_tuple (std::forward<Sta> (states)...), std::forward<Ins> (instrumentation));
+}
+
+template <typename... Sta, typename Ins, typename Glob>
+        requires (!is_state<Ins>::value) && (!is_global<Ins>::value) && std::conjunction_v<is_state<Sta>...> && is_global<Glob>::value
+constexpr auto machine (Ins &&instrumentation, Glob &&glob, Sta &&...states)
+{
+        return Machine<decltype (std::make_tuple (std::forward<Sta> (states)...)), std::unwrap_ref_decay_t<Ins>, std::unwrap_ref_decay_t<Glob>> (
+                std::make_tuple (std::forward<Sta> (states)...), std::forward<Ins> (instrumentation), std::forward<Glob> (glob));
 }
 
 namespace detail {
@@ -280,7 +316,7 @@ namespace detail {
 
 } // namespace detail
 
-template <typename StaT, typename Ins> template <typename Fun> void Machine<StaT, Ins>::forCurrentState (Fun &&function)
+template <typename StaT, typename Ins, typename Glob> template <typename Fun> void Machine<StaT, Ins, Glob>::forCurrentState (Fun &&function)
 {
         std::apply (
                 [&function, this] (auto &...state) { detail::runIfCurrentState (currentStateIndex, std::forward<Fun> (function), state...); },
@@ -314,7 +350,7 @@ template <typename Ev, typename TraT, typename Fun> void forMatchingTransition (
         }
 }
 
-template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT, Ins>::run (Ev const &ev)
+template <typename StaT, typename Ins, typename Glob> template <typename Ev> bool Machine<StaT, Ins, Glob>::run (Ev const &ev)
 {
         bool stateChangedAtLeastOnce{};
 
@@ -338,29 +374,30 @@ template <typename StaT, typename Ins> template <typename Ev> bool Machine<StaT,
                                 return;
                         }
 
-                        forMatchingTransition (
-                                ev, state.transitions,
-                                [&ev, &stateChanged, &stateChangedAtLeastOnce, machine, &state] (auto &transition, int acceptedTransNumber) {
-                                        runActions (ev, state.exitActions.act);
+                        auto onTransition = [&ev, &stateChanged, &stateChangedAtLeastOnce, machine, &state] (auto &transition,
+                                                                                                             int acceptedTransNumber) {
+                                runActions (ev, state.exitActions.act);
 
-                                        if constexpr (requires {
-                                                              machine->instrumentation.onExit (
-                                                                      std::remove_reference_t<decltype (state)>::Name::c_str (),
-                                                                      std::remove_reference_t<decltype (state)>::Name::getIndex (),
-                                                                      acceptedTransNumber);
-                                                      }) {
-                                                machine->instrumentation.onExit (std::remove_reference_t<decltype (state)>::Name::c_str (),
-                                                                                 std::remove_reference_t<decltype (state)>::Name::getIndex (),
-                                                                                 acceptedTransNumber);
-                                        }
+                                if constexpr (requires {
+                                                      machine->instrumentation.onExit (
+                                                              std::remove_reference_t<decltype (state)>::Name::c_str (),
+                                                              std::remove_reference_t<decltype (state)>::Name::getIndex (), acceptedTransNumber);
+                                              }) {
+                                        machine->instrumentation.onExit (std::remove_reference_t<decltype (state)>::Name::c_str (),
+                                                                         std::remove_reference_t<decltype (state)>::Name::getIndex (),
+                                                                         acceptedTransNumber);
+                                }
 
-                                        transition.runTransitionActions (ev);
-                                        machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
-                                        machine->currentStateName = std::remove_reference_t<decltype (transition)>::Name::c_str ();
-                                        stateChangedAtLeastOnce = stateChanged = true;
-                                        machine->entryRun = false; // TODO what should happen in case of an exception thworwn from exit or
-                                                                   // transition action?
-                                });
+                                transition.runTransitionActions (ev);
+                                machine->currentStateIndex = std::remove_reference_t<decltype (transition)>::Name::getIndex ();
+                                machine->currentStateName = std::remove_reference_t<decltype (transition)>::Name::c_str ();
+                                stateChangedAtLeastOnce = stateChanged = true;
+                                machine->entryRun = false; // TODO what should happen in case of an exception thworwn from exit or
+                                                           // transition action?
+                        };
+
+                        forMatchingTransition (ev, machine->global.transitions, onTransition);
+                        forMatchingTransition (ev, state.transitions, onTransition);
                 });
 
                 if (!stateChanged || entryRun) {

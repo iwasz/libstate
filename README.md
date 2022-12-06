@@ -32,12 +32,6 @@ REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 /// ...
 ```
 
-# Milestones
-1. Static, typesafe API.
-1. Changing states.
-1. Running actions in correct order (partially)
-1. Retained input.
-
 # TODOs
 * [ ] Return neneric std::duration instead aof a std::chrono::nanoseconds
 * [ ] There should be an error when adding exit to entry like that : ```entry ([] {}, exit ([] {}))```. This is obviously a mistake.
@@ -52,9 +46,9 @@ should be with or without either of : condition, action (s).
 must be persisted between calls to run). 
 * [ ] Consider adding input actions, I might be wrong, but I think I used one of those in MC60 (forgetting abit the name "input action").
 * [ ] All sorts of misuses should be pointed out in compile time with meaningful messages (use static_asserts whenever possible).
-* [ ] Nullary conditions does not work.
+* [ ] Nullary conditions do not work.
 * [ ] Meaningful message when condition argumnet type is incompatible with event type, and so on.
-* [ ] Allow raising an event from inside of actions (somehow).
+* [x] Allow raising an event from inside of actions (somehow).
 * [ ] The code is so generic, that it sometimes accepts wrong type of arguments, like you can pass transition instead of a state. It should be that the compiler reported shuch a misuse on early stage and with meaningful messages.
 * [ ] Configurable (as a template argument?) output class. Defaults to std::cout. oh, it also can be a lambda passed to the run method or something. Another idea is to have "instrument" / "augument" type passed to the run method. It could do all sorts of additional things like logging, measuring performance, making stats etc.
 * [ ] Events as std::tuples or std::pairs, and then actions and conditions would get parameter pack of arguments (hana::unpacked or std::apply-ied).
