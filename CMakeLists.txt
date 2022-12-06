@@ -24,6 +24,7 @@ ADD_EXECUTABLE (unittest
     "test/02ActionTest.cc"    
     "test/03TraitsTest.cc"
     "test/04EventQueueTest.cc"
+    "test/05ConditionTest.cc"
 )
 target_link_libraries("unittest" ncursesw Catch2::Catch2)
 

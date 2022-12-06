@@ -2,9 +2,6 @@
  *                                                                          *
  *  Author : lukasz.iwaszkiewicz@gmail.com                                  *
  *  ~~~~~~~~
-
- // TODO add license file
-
  *  License : see COPYING file for details.                                 *
  *  ~~~~~~~~~                                                               *
  ****************************************************************************/
@@ -15,6 +12,26 @@
 #include <utility>
 
 namespace ls {
+
+/****************************************************************************/
+
+static auto False = [] (auto const & /* ev */) { return false; };
+static auto True = [] (auto const & /* ev */) { return true; };
+
+auto Not (auto const &cond)
+{
+        return [cond]<typename Evt> (Evt &&evt) { return !cond (std::forward<Evt> (evt)); };
+};
+
+auto And (auto const &...cond)
+{
+        return [cond...]<typename Evt> (Evt &&evt) { return (cond (std::forward<Evt> (evt)) && ...); };
+}
+
+auto Or (auto const &...cond)
+{
+        return [cond...]<typename Evt> (Evt &&evt) { return (cond (std::forward<Evt> (evt)) || ...); };
+}
 
 /****************************************************************************/
 
@@ -94,7 +111,7 @@ template <typename Sn, typename Con, typename TacT> template <typename Ev> void 
         std::apply ([&ev] (auto &...transitionAction) { (transitionAction (ev), ...); }, transitionActions);
 }
 
-template <typename Sn, typename Con, typename... Tac> auto transition (Sn, Con &&condition, Tac &&...actions)
+template <typename Sn, typename Con, typename... Tac> auto transition (Sn /* where */, Con &&condition, Tac &&...actions)
 {
         return Transition<Sn, std::decay_t<Con>, decltype (std::make_tuple (actions...))> (std::forward<Con> (condition),
                                                                                            std::make_tuple (actions...));
