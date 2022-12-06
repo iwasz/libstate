@@ -132,3 +132,66 @@ TEST_CASE ("Machine instance", "[Instantiation]")
         m.run (4);
         REQUIRE (m.getCurrentStateIndex () == "FINAL"_ST.getIndex ());
 }
+
+TEST_CASE ("Optional arguments", "[Instantiation]")
+{
+        auto m = machine (state ("INIT"_ST, entry ([] (int event) { std::cout << "1st entry [" << event << "]" << std::endl; }),
+                                 exit ([] (int) { std::cout << "1st exit" << std::endl; }),
+                                 transition (
+                                         "B"_ST, [] (int i) { return i == 2; }, At ("bla"))),
+
+                          state ("B"_ST, entry (At ("Z")),
+                                 transition (
+                                         "C"_ST, [] (int i) { return i == 3; }, At ("A"), At ("B"))),
+
+                          state ("C"_ST,
+                                 transition (
+                                         "B"_ST, [] (int ev) { return ev == 5; }, At ("")),
+                                 transition (
+                                         "FINAL"_ST, [] (int ev) { return ev == 4; }, At ("Ble"))),
+
+                          state ("FINAL"_ST)
+
+        );
+
+        /*
+         * We run the machine for the first time with two events in the queue. Both
+         * events will be checked by the conditions. Because the transition of "INIT"_ST
+         * fires upon event '2', the state is changed.
+         */
+        m.run (0);
+        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
+
+        m.run (2);
+        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+
+        m.run (3);
+        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
+
+        m.run (5);
+        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+
+        m.run (3);
+        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
+
+        m.run (4);
+        REQUIRE (m.getCurrentStateIndex () == "FINAL"_ST.getIndex ());
+}
+
+TEST_CASE ("Type Traits", "[Instantiation]")
+{
+        auto eee = entry ([] {});
+
+        static_assert (is_entry_action<decltype (eee)>::value);
+        static_assert (!is_entry_action<int>::value);
+
+        auto xxx = exit ([] {});
+
+        static_assert (!is_entry_action<decltype (xxx)>::value);
+        static_assert (is_exit_action<decltype (xxx)>::value);
+        static_assert (!is_entry_action<int>::value);
+
+        auto ss = state ("lkjsd"_ST);
+        static_assert (!is_entry_action<decltype (xxx)>::value);
+        static_assert (is_state<decltype (ss)>::value);
+}

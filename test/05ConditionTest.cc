@@ -34,7 +34,7 @@ struct MyTrue {
 /**
  *
  */
-TEST_CASE ("Value vs reference", "[Condition]")
+TEST_CASE ("Value vs reference cond", "[Condition]")
 {
         MyTrue myTrue;
 

@@ -31,18 +31,21 @@ struct Instrumentation {
 TEST_CASE ("Instrumentation", "[Action]")
 {
         std::vector<std::string> results;
+        using namespace std::string_literals;
 
-        // TODO this worked, and stoped to compile after introducing ErasedTransitions
-        // TODO it work again only because I explicitlu implemented copy constructors
-        auto res = [&results] (std::string const &message) { return [&results, message] (auto /* a */) { results.push_back (message); }; };
-        // auto res = [&results] (std::string message) { return [&results, message] () { results.push_back (message); }; };
         auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
 
         struct Instr {
                 Instr (std::vector<std::string> &r) : results (r) {}
-                void onStateChange (const char *currentStateName, unsigned int /* currentStateIndex */)
+
+                void onEntry (const char *currentStateName, unsigned int /* currentStateIndex */)
                 {
-                        results.emplace_back (currentStateName);
+                        results.emplace_back (currentStateName + " entry"s);
+                }
+
+                void onExit (const char *currentStateName, unsigned int /* currentStateIndex */, int acceptedTransNumber)
+                {
+                        results.emplace_back (currentStateName + " exit "s + std::to_string (acceptedTransNumber));
                 }
 
                 std::vector<std::string> &results;
@@ -50,72 +53,91 @@ TEST_CASE ("Instrumentation", "[Action]")
 
         Instr iii (results);
 
-        auto m = machinei (
-                iii,
-                state ("INIT"_ST, entry (res ("INIT entry")), exit (res ("INIT exit")), transition ("B"_ST, eq (2), res ("INIT->B action"))),
+        auto m = machine (iii, state ("INIT"_ST, transition ("B"_ST, eq (2))),
 
-                state ("B"_ST, entry (res ("B entry")), exit (res ("B exit")),
-                       transition ("C"_ST, eq (3), res ("B->C action1"), res ("B->C action2"))),
+                          state ("B"_ST, transition ("C"_ST, eq (3)), transition ("C"_ST, eq (66))
 
-                state ("C"_ST, entry (res ("C entry")), exit (res ("C exit")), transition ("B"_ST, eq (5), res ("C->B action")),
-                       transition ("FINAL"_ST, eq (4), res ("C->FINAL action"))),
+                                         ),
 
-                state ("FINAL"_ST, entry (res ("FINAL entry")), exit (res ("")), transition ("FINAL"_ST, eq (77), res ("C->FINAL action")))
+                          state ("C"_ST, transition ("B"_ST, eq (5), [] (auto) {}), //
+                                 transition ("FINAL"_ST, eq (4), [] (auto) {})),
+
+                          state ("FINAL"_ST, transition ("FINAL"_ST, eq (77), [] (auto) {}))
 
         );
 
         m.run (0);
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
-        REQUIRE (results.at (0) == "INIT entry");
-        REQUIRE (results.size () == 1);
+        CHECK (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
+        CHECK (results.at (0) == "INIT entry");
+        CHECK (results.size () == 1);
 
         m.run (-1); // Nothing should happen
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
+        CHECK (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
         REQUIRE (results.size () == 1);
 
         m.run (2); // State is successfully changed to "B"_ST.
-        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+        CHECK (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 
-        // TODO
+        REQUIRE (results.size () == 3);
+        CHECK (results.at (1) == "INIT exit 0");
+        CHECK (results.at (2) == "B entry");
+
+        m.run (66);
+        CHECK (m.getCurrentStateIndex () == "C"_ST.getIndex ());
         REQUIRE (results.size () == 5);
-        REQUIRE (results.at (1) == "INIT exit");
-        REQUIRE (results.at (2) == "INIT->B action");
-        REQUIRE (results.at (3) == "B");
-        REQUIRE (results.at (4) == "B entry");
+        CHECK (results.at (3) == "B exit 1");
+        CHECK (results.at (4) == "C entry");
+
+        m.run (4);
+        CHECK (m.getCurrentStateIndex () == "FINAL"_ST.getIndex ());
+        REQUIRE (results.size () == 7);
+        CHECK (results.at (5) == "C exit 1");
+        CHECK (results.at (6) == "FINAL entry");
 
         m.run (3);
-        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
-        REQUIRE (results.at (5) == "B exit");
-        REQUIRE (results.at (6) == "B->C action1");
-        REQUIRE (results.at (7) == "B->C action2");
-        REQUIRE (results.at (8) == "C");
-        REQUIRE (results.at (9) == "C entry");
-        REQUIRE (results.size () == 10);
+        CHECK (m.getCurrentStateIndex () == "FINAL"_ST.getIndex ());
+        REQUIRE (results.size () == 7);
 
-        m.run (5);
-        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
-        REQUIRE (results.at (10) == "C exit");
-        REQUIRE (results.at (11) == "C->B action");
-        REQUIRE (results.at (12) == "B");
-        REQUIRE (results.at (13) == "B entry");
-        REQUIRE (results.size () == 14);
+        m.run (77); // Transition condition is satisfied.
+        CHECK (m.getCurrentStateIndex () == "FINAL"_ST.getIndex ());
+        REQUIRE (results.size () == 9);
+        CHECK (results.at (7) == "FINAL exit 0");
+        CHECK (results.at (8) == "FINAL entry");
+}
 
-        m.run (3);
-        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
-        REQUIRE (results.at (14) == "B exit");
-        REQUIRE (results.at (15) == "B->C action1");
-        REQUIRE (results.at (16) == "B->C action2");
-        REQUIRE (results.at (17) == "C");
-        REQUIRE (results.at (18) == "C entry");
-        REQUIRE (results.size () == 19);
+TEST_CASE ("Instrumentation by ref", "[Action]")
+{
+        using namespace std::string_literals;
 
-        m.run (4); // Transition condition is satisfied.
-        REQUIRE (m.getCurrentStateIndex () == "FINAL"_ST.getIndex ());
-        REQUIRE (results.at (19) == "C exit");
-        REQUIRE (results.at (20) == "C->FINAL action");
-        REQUIRE (results.at (21) == "FINAL");
-        REQUIRE (results.at (22) == "FINAL entry");
-        REQUIRE (results.size () == 23);
+        auto eq = [] (int what) { return [what] (auto const &i) { return i == what; }; };
+
+        struct Instr {
+
+                void onEntry (const char *currentStateName, unsigned int /* currentStateIndex */)
+                {
+                        results.emplace_back (currentStateName + " entry"s);
+                }
+
+                void onExit (const char *currentStateName, unsigned int /* currentStateIndex */, int acceptedTransNumber)
+                {
+                        results.emplace_back (currentStateName + " exit "s + std::to_string (acceptedTransNumber));
+                }
+
+                std::vector<std::string> results;
+        };
+
+        Instr iii;
+
+        auto m = machine (std::ref (iii), state ("INIT"_ST, transition ("B"_ST, eq (2))),
+                          state ("B"_ST, transition ("C"_ST, eq (3)), transition ("C"_ST, eq (66))),
+                          state ("FINAL"_ST, transition ("FINAL"_ST, eq (77), [] (auto) {}))
+
+        );
+
+        m.run (0);
+        CHECK (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
+        CHECK (iii.results.at (0) == "INIT entry");
+        CHECK (iii.results.size () == 1);
 }
 
 /**
@@ -141,22 +163,22 @@ TEST_CASE ("Entry action exception", "[Action]")
         );
 
         CHECK_NOTHROW (m.run (0));
-        REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
-        REQUIRE (results.at (0) == "INIT entry");
-        REQUIRE (results.size () == 1);
+        CHECK (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
+        CHECK (results.at (0) == "INIT entry");
+        CHECK (results.size () == 1);
 
         CHECK_THROWS (m.run (2));
-        REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
-        REQUIRE (results.size () == 3);
-        REQUIRE (results.at (1) == "INIT->B action");
-        REQUIRE (results.back () == "B entry");
+        CHECK (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+        CHECK (results.size () == 3);
+        CHECK (results.at (1) == "INIT->B action");
+        CHECK (results.back () == "B entry");
 
         // Even thougfh an exception was thrown, we can proceed as usual. User has to deal with the exception.
         CHECK_NOTHROW (m.run (3));
-        REQUIRE (m.getCurrentStateIndex () != "B"_ST.getIndex ());
-        REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
-        REQUIRE (results.size () == 4);
-        REQUIRE (results.back () == "C entry");
+        CHECK (m.getCurrentStateIndex () != "B"_ST.getIndex ());
+        CHECK (m.getCurrentStateIndex () == "C"_ST.getIndex ());
+        CHECK (results.size () == 4);
+        CHECK (results.back () == "C entry");
 }
 
 TEST_CASE ("Exit action exception", "[Action]")
@@ -178,20 +200,77 @@ TEST_CASE ("Exit action exception", "[Action]")
         // );
 
         // CHECK_NOTHROW (m.run (0));
-        // REQUIRE (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
-        // REQUIRE (results.at (0) == "INIT entry");
-        // REQUIRE (results.size () == 1);
+        // CHECK (m.getCurrentStateIndex () == "INIT"_ST.getIndex ());
+        // CHECK (results.at (0) == "INIT entry");
+        // CHECK (results.size () == 1);
 
         // CHECK_NOTHROW (m.run (2));
-        // REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
-        // REQUIRE (results.size () == 3);
-        // REQUIRE (results.at (1) == "INIT->B action");
-        // REQUIRE (results.back () == "B entry");
+        // CHECK (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+        // CHECK (results.size () == 3);
+        // CHECK (results.at (1) == "INIT->B action");
+        // CHECK (results.back () == "B entry");
 
         // // Even thougfh an exception was thrown, we can proceed as usual. User has to deal with the exception.
         // CHECK_THROWS (m.run (3));
-        // REQUIRE (m.getCurrentStateIndex () != "B"_ST.getIndex ());
-        // REQUIRE (m.getCurrentStateIndex () == "C"_ST.getIndex ());
-        // REQUIRE (results.size () == 4);
-        // REQUIRE (results.back () == "C entry");
+        // CHECK (m.getCurrentStateIndex () != "B"_ST.getIndex ());
+        // CHECK (m.getCurrentStateIndex () == "C"_ST.getIndex ());
+        // CHECK (results.size () == 4);
+        // CHECK (results.back () == "C entry");
+}
+
+struct MyAction {
+
+        bool operator() (auto const & /* event */) const
+        {
+                ++cnt;
+                return true;
+        }
+
+        mutable int cnt{};
+};
+
+TEST_CASE ("Value vs reference", "[Action]")
+{
+        MyAction action;
+
+        SECTION ("ByValue")
+        {
+                auto m = machine (state ("A"_ST, entry (action), transition ("B"_ST, True)),
+                                  state ("B"_ST, entry (action), transition ("A"_ST, True)));
+
+                CHECK_NOTHROW (m.run (0));
+                CHECK (m.getCurrentStateIndex () == "A"_ST.getIndex ());
+
+                CHECK_NOTHROW (m.run (2));
+                CHECK (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+
+                CHECK_NOTHROW (m.run (3));
+                CHECK (m.getCurrentStateIndex () == "A"_ST.getIndex ());
+
+                /*
+                 *  CNT is 0 because myTrue condition was copied both for A and B.
+                 */
+                CHECK (action.cnt == 0);
+        }
+
+        SECTION ("ByReference")
+        {
+                auto m = machine (
+                        state ("A"_ST, entry (std::ref (action)), exit (std::ref (action)), transition ("B"_ST, True, std::ref (action))),
+                        state ("B"_ST, entry (std::ref (action)), exit (std::ref (action)), transition ("A"_ST, True, std::ref (action))));
+
+                CHECK_NOTHROW (m.run (0));
+                CHECK (m.getCurrentStateIndex () == "A"_ST.getIndex ());
+
+                CHECK_NOTHROW (m.run (2));
+                CHECK (m.getCurrentStateIndex () == "B"_ST.getIndex ());
+
+                CHECK_NOTHROW (m.run (3));
+                CHECK (m.getCurrentStateIndex () == "A"_ST.getIndex ());
+
+                /*
+                 * CNT is 2 because we used std::ref so only 1 instance is ever created
+                 */
+                CHECK (action.cnt == 7); // because we get back to A
+        }
 }
