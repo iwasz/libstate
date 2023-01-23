@@ -16,7 +16,7 @@ include_directories ("deps/GSL/include" "deps/etl/include")
 INCLUDE_DIRECTORIES("src")
 INCLUDE_DIRECTORIES("test")
     
-ADD_EXECUTABLE (unittest
+ADD_EXECUTABLE (statekUnittest
     "test/Utils.cc"
     "test/Utils.h"
     "test/00CatchInit.cc"
@@ -25,8 +25,9 @@ ADD_EXECUTABLE (unittest
     "test/03TraitsTest.cc"
     "test/04EventQueueTest.cc"
     "test/05ConditionTest.cc"
+    "test/06TransitionTest.cc"
 )
-target_link_libraries("unittest" ncursesw Catch2::Catch2)
+target_link_libraries("statekUnittest" ncursesw Catch2::Catch2)
 
 # ADD_EXECUTABLE (benchmarktest
 #     "test/benchmark.cc"

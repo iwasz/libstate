@@ -1,6 +1,7 @@
 # To be documented
 * Initial state is the state whih was first added (convention).
 * Action callback interface options : can return Done or void, can take an Event argument or void.
+* Gloabl transition
 
 # A quick example
 ``` cpp
@@ -33,6 +34,10 @@ REQUIRE (m.getCurrentStateIndex () == "B"_ST.getIndex ());
 ```
 
 # TODOs
+* [ ] How to prevent transition to self when global transition is trigerred (is that possible?)
+  * [ ] Either add a magic option somewhere like, preventSelfUponGlobal 
+  * [ ] Or maybe I could make detecting current state inside conditions possible. That would be more universal.
+  * [ ] Or I could suggest (in the docs I mean) some kind of hack with boolean var.
 * [ ] Return neneric std::duration instead aof a std::chrono::nanoseconds
 * [ ] There should be an error when adding exit to entry like that : ```entry ([] {}, exit ([] {}))```. This is obviously a mistake.
 * [ ] When wrappers are sorted out, pay attention to function / method / lambda argument types (&, &&, universal && etc).
