@@ -396,6 +396,7 @@ template <typename StaT, typename Ins, typename Glob> template <typename Ev> boo
                                                            // transition action?
                         };
 
+                        // TODO global should go after speciffic. This way we could override!
                         forMatchingTransition (ev, machine->global.transitions, onTransition);
                         forMatchingTransition (ev, state.transitions, onTransition);
                 });
